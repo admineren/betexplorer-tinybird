@@ -1,1 +1,25 @@
+name: Tinybird Deploy
 
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  TINYBIRD_HOST: ${{ secrets.TINYBIRD_HOST }}
+  TINYBIRD_TOKEN: ${{ secrets.TINYBIRD_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Tinybird CLI
+        run: curl https://tinybird.co | sh
+
+      - name: Deploy project
+        run: tb --cloud --host "$TINYBIRD_HOST" --token "$TINYBIRD_TOKEN" deploy
