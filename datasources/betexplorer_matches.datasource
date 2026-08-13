@@ -2,7 +2,7 @@ SCHEMA >
     `match_id` String,
     `country` String,
     `league` String,
-    `season` Int32,
+    `season` String,
     `home_team` String,
     `away_team` String,
     `date` Date,
