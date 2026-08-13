@@ -42,7 +42,7 @@ SCHEMA >
     `ah_away` Nullable(Float32)
 
 ENGINE "MergeTree"
-ENGINE_PARTITION_KEY "toYYYYMM(date)"
+ENGINE_PARTITION_KEY "toYear(date)"
 ENGINE_SORTING_KEY "country, league, season, date, match_id"
 
 FORWARD_QUERY >
