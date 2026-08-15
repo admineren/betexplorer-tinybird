@@ -4,170 +4,123 @@ DESCRIPTION >
 
 NODE team_general_query
 SQL >
-    %
     SELECT
+
+        /* =====================================================
+           MAÇ PERFORMANSI
+           ===================================================== */
+
         count() AS matches,
 
-        /* MAÇ PERFORMANSI */
-        countIf(result = 'G') AS wins,
-        countIf(result = 'B') AS draws,
-        countIf(result = 'M') AS losses,
+        countIf(
+            (
+                home_team = {{String(team)}}
+                AND ft_home > ft_away
+            )
+            OR
+            (
+                away_team = {{String(team)}}
+                AND ft_away > ft_home
+            )
+        ) AS wins,
 
-        round(
-            countIf(result = 'G') * 100.0 / count(),
-            2
-        ) AS win_pct,
+        countIf(ft_home = ft_away) AS draws,
 
-        round(
-            countIf(result = 'B') * 100.0 / count(),
-            2
-        ) AS draw_pct,
-
-        round(
-            countIf(result = 'M') * 100.0 / count(),
-            2
-        ) AS loss_pct,
-
-        /* GOL PERFORMANSI */
-        sum(goals_for) AS goals_for,
-        sum(goals_against) AS goals_against,
-
-        sum(goals_for) - sum(goals_against)
-            AS goal_difference,
-
-        round(
-            sum(goals_for) * 1.0 / count(),
-            2
-        ) AS goals_for_avg,
-
-        round(
-            sum(goals_against) * 1.0 / count(),
-            2
-        ) AS goals_against_avg,
-
-        round(
-            (sum(goals_for) + sum(goals_against)) * 1.0 / count(),
-            2
-        ) AS total_goals_avg,
-
-        /* İLK YARI */
-        sum(ht_goals_for)
-            AS ht_goals_for,
-
-        sum(ht_goals_against)
-            AS ht_goals_against,
-
-        sum(ht_goals_for) - sum(ht_goals_against)
-            AS ht_goal_difference,
-
-        /* İKİNCİ YARI */
-        sum(second_half_goals_for)
-            AS second_half_goals_for,
-
-        sum(second_half_goals_against)
-            AS second_half_goals_against,
-
-        sum(second_half_goals_for)
-            - sum(second_half_goals_against)
-            AS second_half_goal_difference
-
-    FROM
-    (
-        SELECT
-
-            /* =====================================================
-               TAKIMIN MAÇTAKİ GERÇEK YÖNÜ
-               ===================================================== */
-
-            if(
-                home_team = {{String(team)}},
-
-                /* Takım ev sahibi */
-                if(
-                    ft_home > ft_away,
-                    'G',
-                    if(ft_home = ft_away, 'B', 'M')
-                ),
-
-                /* Takım deplasman */
-                if(
-                    ft_away > ft_home,
-                    'G',
-                    if(ft_away = ft_home, 'B', 'M')
-                )
-            ) AS result,
+        countIf(
+            (
+                home_team = {{String(team)}}
+                AND ft_home < ft_away
+            )
+            OR
+            (
+                away_team = {{String(team)}}
+                AND ft_away < ft_home
+            )
+        ) AS losses,
 
 
-            /* =====================================================
-               TAM MAÇ GOLLERİ
-               ===================================================== */
+        /* =====================================================
+           GOL PERFORMANSI
+           ===================================================== */
 
+        sum(
             if(
                 home_team = {{String(team)}},
                 ft_home,
                 ft_away
-            ) AS goals_for,
+            )
+        ) AS goals_for,
 
+        sum(
             if(
                 home_team = {{String(team)}},
                 ft_away,
                 ft_home
-            ) AS goals_against,
+            )
+        ) AS goals_against,
 
 
-            /* =====================================================
-               İLK YARI
-               ===================================================== */
+        /* =====================================================
+           İLK YARI
+           ===================================================== */
 
+        sum(
             if(
                 home_team = {{String(team)}},
                 ht_home,
                 ht_away
-            ) AS ht_goals_for,
+            )
+        ) AS ht_goals_for,
 
+        sum(
             if(
                 home_team = {{String(team)}},
                 ht_away,
                 ht_home
-            ) AS ht_goals_against,
+            )
+        ) AS ht_goals_against,
 
 
-            /* =====================================================
-               İKİNCİ YARI
-               ===================================================== */
+        /* =====================================================
+           İKİNCİ YARI
+           ===================================================== */
 
+        sum(
             if(
                 home_team = {{String(team)}},
                 ft_home - ht_home,
                 ft_away - ht_away
-            ) AS second_half_goals_for,
+            )
+        ) AS second_half_goals_for,
 
+        sum(
             if(
                 home_team = {{String(team)}},
                 ft_away - ht_away,
                 ft_home - ht_home
-            ) AS second_half_goals_against
-
-        FROM betexplorer_matches
-
-        WHERE
-            (
-                home_team = {{String(team)}}
-                OR
-                away_team = {{String(team)}}
             )
+        ) AS second_half_goals_against
 
-            {% if defined(country) %}
-            AND country = {{String(country)}}
-            {% end %}
 
-            {% if defined(league) %}
-            AND league = {{String(league)}}
-            {% end %}
+    FROM betexplorer_matches
 
-            {% if defined(season) %}
-            AND season = {{String(season)}}
-            {% end %}
-    )
+    WHERE
+        (
+            home_team = {{String(team)}}
+            OR
+            away_team = {{String(team)}}
+        )
+
+        {% if defined(country) %}
+        AND country = {{String(country)}}
+        {% end %}
+
+        {% if defined(league) %}
+        AND league = {{String(league)}}
+        {% end %}
+
+        {% if defined(season) %}
+        AND season = {{String(season)}}
+        {% end %}
 
 TYPE ENDPOINT
