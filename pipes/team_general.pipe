@@ -1,0 +1,64 @@
+DESCRIPTION >
+    Takım genel performans analizi
+
+NODE team_general
+SQL >
+    %
+    SELECT
+        count() AS matches,
+
+        countIf(
+            (home_team = {{String(team)}} AND ft_home > ft_away)
+            OR
+            (away_team = {{String(team)}} AND ft_away > ft_home)
+        ) AS wins,
+
+        countIf(ft_home = ft_away) AS draws,
+
+        countIf(
+            (home_team = {{String(team)}} AND ft_home < ft_away)
+            OR
+            (away_team = {{String(team)}} AND ft_away < ft_home)
+        ) AS losses,
+
+        sum(
+            if(home_team = {{String(team)}}, ft_home, ft_away)
+        ) AS goals_for,
+
+        sum(
+            if(home_team = {{String(team)}}, ft_away, ft_home)
+        ) AS goals_against,
+
+        sum(
+            if(home_team = {{String(team)}}, ft_home - ft_away, ft_away - ft_home)
+        ) AS goal_difference,
+
+        round(
+            100.0 * countIf(
+                (home_team = {{String(team)}} AND ft_home > ft_away)
+                OR
+                (away_team = {{String(team)}} AND ft_away > ft_home)
+            ) / count(),
+            2
+        ) AS win_rate,
+
+        round(
+            sum(
+                if(home_team = {{String(team)}}, ft_home, ft_away)
+            ) / count(),
+            2
+        ) AS goals_for_per_match,
+
+        round(
+            sum(
+                if(home_team = {{String(team)}}, ft_away, ft_home)
+            ) / count(),
+            2
+        ) AS goals_against_per_match
+
+    FROM betexplorer_matches
+    WHERE
+        home_team = {{String(team)}}
+        OR away_team = {{String(team)}}
+
+TYPE ENDPOINT
