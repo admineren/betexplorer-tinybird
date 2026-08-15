@@ -1,0 +1,1197 @@
+DESCRIPTION >
+    İki takım arasındaki H2H analizi.
+
+    Takım 1 ve Takım 2 doğrudan karşılaştırılır.
+
+    Sonuçlar Takım 1 perspektifinden:
+
+    G = Takım 1 galibiyeti
+    B = Beraberlik
+    M = Takım 1 mağlubiyeti
+
+    Saha kapsamları:
+
+    genel
+    team1_home = Takım 1'in kendi sahasındaki H2H
+    team2_home = Takım 2'nin kendi sahasındaki H2H
+
+    Analizler:
+
+    - Genel G / B / M
+    - Takım 1 ve Takım 2 gol performansı
+    - Gol ortalamaları
+    - Over 1.5 / 2.5 / 3.5 / 4.5
+    - BTTS
+    - İlk yarı sonuçları
+    - İlk yarı Over
+    - İkinci yarı gol performansı
+    - İkinci yarı Over
+    - HT / FT 9 kombinasyonu
+    - Maç sonu skor dağılımı
+    - İlk yarı skor dağılımı
+    - İkinci yarı skor dağılımı
+    - HT → FT skor kombinasyonları
+
+    Opsiyonel filtreler:
+
+    country
+    league
+    season
+
+    limit:
+
+    Skor ve HT/FT listelerinde gösterilecek maksimum kayıt sayısı.
+
+
+NODE h2h_query
+SQL >
+    %
+
+    WITH base AS
+    (
+
+        SELECT
+
+            home_team,
+            away_team,
+
+            ht_home,
+            ht_away,
+
+            ft_home,
+            ft_away,
+
+            /* =================================================
+               TAKIM 1 PERSPEKTİFİ
+               ================================================= */
+
+            if(
+                home_team = {{String(team1)}},
+                ft_home,
+                ft_away
+            ) AS team1_ft_goals,
+
+            if(
+                home_team = {{String(team1)}},
+                ft_away,
+                ft_home
+            ) AS team2_ft_goals,
+
+
+            if(
+                home_team = {{String(team1)}},
+                ht_home,
+                ht_away
+            ) AS team1_ht_goals,
+
+            if(
+                home_team = {{String(team1)}},
+                ht_away,
+                ht_home
+            ) AS team2_ht_goals,
+
+
+            /*
+               İkinci yarı golleri
+            */
+
+            if(
+                home_team = {{String(team1)}},
+                ft_home - ht_home,
+                ft_away - ht_away
+            ) AS team1_2h_goals,
+
+            if(
+                home_team = {{String(team1)}},
+                ft_away - ht_away,
+                ft_home - ht_home
+            ) AS team2_2h_goals
+
+
+        FROM betexplorer_matches
+
+
+        WHERE
+
+            (
+                (
+                    home_team = {{String(team1)}}
+                    AND
+                    away_team = {{String(team2)}}
+                )
+
+                OR
+
+                (
+                    home_team = {{String(team2)}}
+                    AND
+                    away_team = {{String(team1)}}
+                )
+            )
+
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
+
+            AND ht_home IS NOT NULL
+            AND ht_away IS NOT NULL
+
+
+            {% if defined(country) %}
+            AND country = {{String(country)}}
+            {% end %}
+
+
+            {% if defined(league) %}
+            AND league = {{String(league)}}
+            {% end %}
+
+
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
+
+    ),
+
+
+    scopes AS
+    (
+
+        /*
+           GENEL
+        */
+
+        SELECT
+            'genel' AS scope,
+            *
+        FROM base
+
+
+        UNION ALL
+
+
+        /*
+           TAKIM 1'İN SAHASINDA
+        */
+
+        SELECT
+            'team1_home' AS scope,
+            *
+        FROM base
+
+        WHERE
+            home_team = {{String(team1)}}
+            AND away_team = {{String(team2)}}
+
+
+        UNION ALL
+
+
+        /*
+           TAKIM 2'NİN SAHASINDA
+        */
+
+        SELECT
+            'team2_home' AS scope,
+            *
+        FROM base
+
+        WHERE
+            home_team = {{String(team2)}}
+            AND away_team = {{String(team1)}}
+
+    )
+
+
+    SELECT
+
+        scope,
+
+        'summary' AS section,
+
+        'matches' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals > team2_ft_goals
+        ) AS team1_value,
+
+        countIf(
+            team1_ft_goals = team2_ft_goals
+        ) AS draw_value,
+
+        countIf(
+            team1_ft_goals < team2_ft_goals
+        ) AS team2_value,
+
+        round(
+            countIf(team1_ft_goals > team2_ft_goals)
+            * 100.0 / count(),
+            2
+        ) AS team1_pct,
+
+        round(
+            countIf(team1_ft_goals = team2_ft_goals)
+            * 100.0 / count(),
+            2
+        ) AS draw_pct,
+
+        round(
+            countIf(team1_ft_goals < team2_ft_goals)
+            * 100.0 / count(),
+            2
+        ) AS team2_pct,
+
+        0.0 AS value1,
+        0.0 AS value2
+
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    GOLLER
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'goals' AS section,
+
+        'goals_for' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        sum(team1_ft_goals) AS team1_value,
+
+        0 AS draw_value,
+
+        sum(team2_ft_goals) AS team2_value,
+
+        0.0 AS team1_pct,
+
+        0.0 AS draw_pct,
+
+        0.0 AS team2_pct,
+
+        round(avg(team1_ft_goals), 2) AS value1,
+
+        round(avg(team2_ft_goals), 2) AS value2
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    TOPLAM GOL ORTALAMASI
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'goals' AS section,
+
+        'total_goals_avg' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        0 AS team1_value,
+        0 AS draw_value,
+        0 AS team2_value,
+
+        0.0 AS team1_pct,
+        0.0 AS draw_pct,
+        0.0 AS team2_pct,
+
+        round(
+            avg(team1_ft_goals + team2_ft_goals),
+            2
+        ) AS value1,
+
+        round(
+            max(team1_ft_goals + team2_ft_goals),
+            2
+        ) AS value2
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    OVER
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'over' AS section,
+
+        'over_1_5' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals + team2_ft_goals > 1
+        ) AS team1_value,
+
+        0 AS draw_value,
+        0 AS team2_value,
+
+        round(
+            countIf(
+                team1_ft_goals + team2_ft_goals > 1
+            ) * 100.0 / count(),
+            2
+        ) AS team1_pct,
+
+        0.0 AS draw_pct,
+        0.0 AS team2_pct,
+
+        0.0 AS value1,
+        0.0 AS value2
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'over' AS section,
+
+        'over_2_5' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals + team2_ft_goals > 2
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ft_goals + team2_ft_goals > 2
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'over' AS section,
+
+        'over_3_5' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals + team2_ft_goals > 3
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ft_goals + team2_ft_goals > 3
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'over' AS section,
+
+        'over_4_5' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals + team2_ft_goals > 4
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ft_goals + team2_ft_goals > 4
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    BTTS
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'btts' AS section,
+
+        'btts_yes' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals > 0
+            AND
+            team2_ft_goals > 0
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ft_goals > 0
+                AND
+                team2_ft_goals > 0
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'btts' AS section,
+
+        'btts_no' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ft_goals = 0
+            OR
+            team2_ft_goals = 0
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ft_goals = 0
+                OR
+                team2_ft_goals = 0
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    İLK YARI
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'first_half' AS section,
+
+        'result' AS metric,
+
+        '' AS score,
+
+        count() AS matches,
+
+        countIf(
+            team1_ht_goals > team2_ht_goals
+        ),
+
+        countIf(
+            team1_ht_goals = team2_ht_goals
+        ),
+
+        countIf(
+            team1_ht_goals < team2_ht_goals
+        ),
+
+        round(
+            countIf(team1_ht_goals > team2_ht_goals)
+            * 100.0 / count(),
+            2
+        ),
+
+        round(
+            countIf(team1_ht_goals = team2_ht_goals)
+            * 100.0 / count(),
+            2
+        ),
+
+        round(
+            countIf(team1_ht_goals < team2_ht_goals)
+            * 100.0 / count(),
+            2
+        ),
+
+        round(avg(team1_ht_goals), 2),
+
+        round(avg(team2_ht_goals), 2)
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    İLK YARI OVER
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'first_half' AS section,
+
+        'ht_over_0_5' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        countIf(
+            team1_ht_goals + team2_ht_goals > 0
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ht_goals + team2_ht_goals > 0
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'first_half' AS section,
+
+        'ht_over_1_5' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        countIf(
+            team1_ht_goals + team2_ht_goals > 1
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ht_goals + team2_ht_goals > 1
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'first_half' AS section,
+
+        'ht_over_2_5' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        countIf(
+            team1_ht_goals + team2_ht_goals > 2
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_ht_goals + team2_ht_goals > 2
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    İKİNCİ YARI
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'second_half' AS section,
+
+        'goals' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        sum(team1_2h_goals),
+
+        0,
+        sum(team2_2h_goals),
+
+        0.0,
+        0.0,
+        0.0,
+
+        round(avg(team1_2h_goals), 2),
+
+        round(avg(team2_2h_goals), 2)
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'second_half' AS section,
+
+        '2h_over_0_5' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        countIf(
+            team1_2h_goals + team2_2h_goals > 0
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_2h_goals + team2_2h_goals > 0
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'second_half' AS section,
+
+        '2h_over_1_5' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        countIf(
+            team1_2h_goals + team2_2h_goals > 1
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_2h_goals + team2_2h_goals > 1
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    SELECT
+
+        scope,
+
+        'second_half' AS section,
+
+        '2h_over_2_5' AS metric,
+
+        '' AS score,
+
+        count(),
+
+        countIf(
+            team1_2h_goals + team2_2h_goals > 2
+        ),
+
+        0,
+        0,
+
+        round(
+            countIf(
+                team1_2h_goals + team2_2h_goals > 2
+            ) * 100.0 / count(),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY scope
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    MAÇ SONU SKOR DAĞILIMI
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'score' AS section,
+
+        'ft' AS metric,
+
+        concat(
+            toString(team1_ft_goals),
+            '-',
+            toString(team2_ft_goals)
+        ) AS score,
+
+        count() AS matches,
+
+        count() AS team1_value,
+
+        0 AS draw_value,
+
+        0 AS team2_value,
+
+        round(
+            count() * 100.0
+            /
+            sum(count()) OVER (PARTITION BY scope),
+            2
+        ) AS team1_pct,
+
+        0.0 AS draw_pct,
+
+        0.0 AS team2_pct,
+
+        0.0 AS value1,
+
+        0.0 AS value2
+
+    FROM scopes
+
+    GROUP BY
+        scope,
+        team1_ft_goals,
+        team2_ft_goals
+
+    ORDER BY
+        scope,
+        matches DESC
+
+    LIMIT {{Int32(limit)}}
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    İLK YARI SKOR DAĞILIMI
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'score' AS section,
+
+        'ht' AS metric,
+
+        concat(
+            toString(team1_ht_goals),
+            '-',
+            toString(team2_ht_goals)
+        ) AS score,
+
+        count(),
+
+        count(),
+        0,
+        0,
+
+        round(
+            count() * 100.0
+            /
+            sum(count()) OVER (PARTITION BY scope),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY
+        scope,
+        team1_ht_goals,
+        team2_ht_goals
+
+    ORDER BY
+        scope,
+        matches DESC
+
+    LIMIT {{Int32(limit)}}
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    İKİNCİ YARI SKOR DAĞILIMI
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'score' AS section,
+
+        '2h' AS metric,
+
+        concat(
+            toString(team1_2h_goals),
+            '-',
+            toString(team2_2h_goals)
+        ) AS score,
+
+        count(),
+
+        count(),
+        0,
+        0,
+
+        round(
+            count() * 100.0
+            /
+            sum(count()) OVER (PARTITION BY scope),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY
+        scope,
+        team1_2h_goals,
+        team2_2h_goals
+
+    ORDER BY
+        scope,
+        matches DESC
+
+    LIMIT {{Int32(limit)}}
+
+
+    UNION ALL
+
+
+    /*
+    ============================================================
+    HT → FT
+    ============================================================
+    */
+
+    SELECT
+
+        scope,
+
+        'ht_ft' AS section,
+
+        'combination' AS metric,
+
+        concat(
+
+            if(
+                team1_ht_goals > team2_ht_goals,
+                'G',
+                if(
+                    team1_ht_goals = team2_ht_goals,
+                    'B',
+                    'M'
+                )
+            ),
+
+            ' → ',
+
+            if(
+                team1_ft_goals > team2_ft_goals,
+                'G',
+                if(
+                    team1_ft_goals = team2_ft_goals,
+                    'B',
+                    'M'
+                )
+            )
+
+        ) AS score,
+
+        count(),
+
+        count(),
+        0,
+        0,
+
+        round(
+            count() * 100.0
+            /
+            sum(count()) OVER (PARTITION BY scope),
+            2
+        ),
+
+        0.0,
+        0.0,
+
+        0.0,
+        0.0
+
+    FROM scopes
+
+    GROUP BY
+        scope,
+        team1_ht_goals,
+        team2_ht_goals,
+        team1_ft_goals,
+        team2_ft_goals
+
+    ORDER BY
+        scope,
+        matches DESC
+
+    LIMIT {{Int32(limit)}}
+
+
+TYPE ENDPOINT
