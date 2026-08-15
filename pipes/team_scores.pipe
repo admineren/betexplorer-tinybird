@@ -1,0 +1,862 @@
+DESCRIPTION >
+    Takım skor analizi.
+
+    Takımın maç sonu, ilk yarı, ikinci yarı ve HT/FT
+    skorlarını takım perspektifinden analiz eder.
+
+    İç saha ve deplasman sonuçları da ayrıca hesaplanır.
+
+    Skorlar her zaman analiz edilen takımın perspektifindedir.
+
+    Örnek:
+
+    Rakip 0 - 2 Takım
+    takım perspektifi -> 2-0
+
+    Takım 2 - 1 Rakip
+    takım perspektifi -> 2-1
+
+    Bölümler:
+
+    GENERAL
+    HOME
+    AWAY
+
+    Skor tipleri:
+
+    FT
+    HT
+    SECOND_HALF
+    HT_FT
+
+    Parametreler:
+
+    team     zorunlu
+    country  opsiyonel
+    league   opsiyonel
+    season   opsiyonel
+    limit    opsiyonel, varsayılan 10
+
+
+NODE team_scores_query
+SQL >
+    %
+
+    WITH base AS
+    (
+
+        SELECT
+
+            /* =================================================
+               TAKIM PERSPEKTİFİ
+               ================================================= */
+
+            if(
+                home_team = {{String(team)}},
+                'home',
+                'away'
+            ) AS venue,
+
+
+            /* =================================================
+               MAÇ SONU SKORU
+               ================================================= */
+
+            toInt32(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                )
+            ) AS team_ft_goals,
+
+            toInt32(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                )
+            ) AS opponent_ft_goals,
+
+
+            /* =================================================
+               İLK YARI SKORU
+               ================================================= */
+
+            toInt32(
+                if(
+                    home_team = {{String(team)}},
+                    ht_home,
+                    ht_away
+                )
+            ) AS team_ht_goals,
+
+            toInt32(
+                if(
+                    home_team = {{String(team)}},
+                    ht_away,
+                    ht_home
+                )
+            ) AS opponent_ht_goals,
+
+
+            /* =================================================
+               İKİNCİ YARI GOLLERİ
+               ================================================= */
+
+            toInt32(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home - ht_home,
+                    ft_away - ht_away
+                )
+            ) AS team_2h_goals,
+
+            toInt32(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away - ht_away,
+                    ft_home - ht_home
+                )
+            ) AS opponent_2h_goals
+
+
+        FROM betexplorer_matches
+
+
+        WHERE
+
+            (
+                home_team = {{String(team)}}
+                OR
+                away_team = {{String(team)}}
+            )
+
+            /* Tamamlanmış maç */
+
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
+
+            /* İlk yarı bilgisi */
+
+            AND ht_home IS NOT NULL
+            AND ht_away IS NOT NULL
+
+
+            /* =================================================
+               OPSİYONEL FİLTRELER
+               ================================================= */
+
+            {% if defined(country) %}
+            AND country = {{String(country)}}
+            {% end %}
+
+
+            {% if defined(league) %}
+            AND league = {{String(league)}}
+            {% end %}
+
+
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
+
+    ),
+
+
+    /* =========================================================
+       GENERAL - MAÇ SONU
+       ========================================================= */
+
+    general_ft AS
+    (
+
+        SELECT
+
+            'general' AS scope,
+
+            'ft' AS score_type,
+
+            concat(
+                toString(team_ft_goals),
+                '-',
+                toString(opponent_ft_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+            ) AS matches
+
+        FROM base
+
+        GROUP BY
+            team_ft_goals,
+            opponent_ft_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       GENERAL - İLK YARI
+       ========================================================= */
+
+    general_ht AS
+    (
+
+        SELECT
+
+            'general' AS scope,
+
+            'ht' AS score_type,
+
+            concat(
+                toString(team_ht_goals),
+                '-',
+                toString(opponent_ht_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+            ) AS matches
+
+        FROM base
+
+        GROUP BY
+            team_ht_goals,
+            opponent_ht_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       GENERAL - İKİNCİ YARI
+       ========================================================= */
+
+    general_2h AS
+    (
+
+        SELECT
+
+            'general' AS scope,
+
+            'second_half' AS score_type,
+
+            concat(
+                toString(team_2h_goals),
+                '-',
+                toString(opponent_2h_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+            ) AS matches
+
+        FROM base
+
+        GROUP BY
+            team_2h_goals,
+            opponent_2h_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       GENERAL - HT → FT
+       ========================================================= */
+
+    general_htft AS
+    (
+
+        SELECT
+
+            'general' AS scope,
+
+            'ht_ft' AS score_type,
+
+            concat(
+
+                toString(team_ht_goals),
+                '-',
+                toString(opponent_ht_goals),
+
+                ' → ',
+
+                toString(team_ft_goals),
+                '-',
+                toString(opponent_ft_goals)
+
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+            ) AS matches
+
+        FROM base
+
+        GROUP BY
+
+            team_ht_goals,
+            opponent_ht_goals,
+
+            team_ft_goals,
+            opponent_ft_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       HOME - MAÇ SONU
+       ========================================================= */
+
+    home_ft AS
+    (
+
+        SELECT
+
+            'home' AS scope,
+
+            'ft' AS score_type,
+
+            concat(
+                toString(team_ft_goals),
+                '-',
+                toString(opponent_ft_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'home'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'home'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'home'
+
+        GROUP BY
+            team_ft_goals,
+            opponent_ft_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       HOME - İLK YARI
+       ========================================================= */
+
+    home_ht AS
+    (
+
+        SELECT
+
+            'home' AS scope,
+
+            'ht' AS score_type,
+
+            concat(
+                toString(team_ht_goals),
+                '-',
+                toString(opponent_ht_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'home'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'home'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'home'
+
+        GROUP BY
+            team_ht_goals,
+            opponent_ht_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       HOME - İKİNCİ YARI
+       ========================================================= */
+
+    home_2h AS
+    (
+
+        SELECT
+
+            'home' AS scope,
+
+            'second_half' AS score_type,
+
+            concat(
+                toString(team_2h_goals),
+                '-',
+                toString(opponent_2h_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'home'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'home'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'home'
+
+        GROUP BY
+            team_2h_goals,
+            opponent_2h_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       HOME - HT → FT
+       ========================================================= */
+
+    home_htft AS
+    (
+
+        SELECT
+
+            'home' AS scope,
+
+            'ht_ft' AS score_type,
+
+            concat(
+
+                toString(team_ht_goals),
+                '-',
+                toString(opponent_ht_goals),
+
+                ' → ',
+
+                toString(team_ft_goals),
+                '-',
+                toString(opponent_ft_goals)
+
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'home'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'home'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'home'
+
+        GROUP BY
+
+            team_ht_goals,
+            opponent_ht_goals,
+
+            team_ft_goals,
+            opponent_ft_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       AWAY - MAÇ SONU
+       ========================================================= */
+
+    away_ft AS
+    (
+
+        SELECT
+
+            'away' AS scope,
+
+            'ft' AS score_type,
+
+            concat(
+                toString(team_ft_goals),
+                '-',
+                toString(opponent_ft_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'away'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'away'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'away'
+
+        GROUP BY
+            team_ft_goals,
+            opponent_ft_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       AWAY - İLK YARI
+       ========================================================= */
+
+    away_ht AS
+    (
+
+        SELECT
+
+            'away' AS scope,
+
+            'ht' AS score_type,
+
+            concat(
+                toString(team_ht_goals),
+                '-',
+                toString(opponent_ht_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'away'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'away'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'away'
+
+        GROUP BY
+            team_ht_goals,
+            opponent_ht_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       AWAY - İKİNCİ YARI
+       ========================================================= */
+
+    away_2h AS
+    (
+
+        SELECT
+
+            'away' AS scope,
+
+            'second_half' AS score_type,
+
+            concat(
+                toString(team_2h_goals),
+                '-',
+                toString(opponent_2h_goals)
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'away'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'away'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'away'
+
+        GROUP BY
+            team_2h_goals,
+            opponent_2h_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    ),
+
+
+    /* =========================================================
+       AWAY - HT → FT
+       ========================================================= */
+
+    away_htft AS
+    (
+
+        SELECT
+
+            'away' AS scope,
+
+            'ht_ft' AS score_type,
+
+            concat(
+
+                toString(team_ht_goals),
+                '-',
+                toString(opponent_ht_goals),
+
+                ' → ',
+
+                toString(team_ft_goals),
+                '-',
+                toString(opponent_ft_goals)
+
+            ) AS score,
+
+            count() AS score_count,
+
+            round(
+                count() * 100.0 /
+                (
+                    SELECT count()
+                    FROM base
+                    WHERE venue = 'away'
+                ),
+                2
+            ) AS pct,
+
+            (
+                SELECT count()
+                FROM base
+                WHERE venue = 'away'
+            ) AS matches
+
+        FROM base
+
+        WHERE venue = 'away'
+
+        GROUP BY
+
+            team_ht_goals,
+            opponent_ht_goals,
+
+            team_ft_goals,
+            opponent_ft_goals
+
+        ORDER BY score_count DESC
+
+        LIMIT {{Int32(limit, 10)}}
+
+    )
+
+
+    /* =========================================================
+       SONUÇLAR
+       ========================================================= */
+
+    SELECT * FROM general_ft
+
+    UNION ALL
+
+    SELECT * FROM general_ht
+
+    UNION ALL
+
+    SELECT * FROM general_2h
+
+    UNION ALL
+
+    SELECT * FROM general_htft
+
+    UNION ALL
+
+    SELECT * FROM home_ft
+
+    UNION ALL
+
+    SELECT * FROM home_ht
+
+    UNION ALL
+
+    SELECT * FROM home_2h
+
+    UNION ALL
+
+    SELECT * FROM home_htft
+
+    UNION ALL
+
+    SELECT * FROM away_ft
+
+    UNION ALL
+
+    SELECT * FROM away_ht
+
+    UNION ALL
+
+    SELECT * FROM away_2h
+
+    UNION ALL
+
+    SELECT * FROM away_htft
+
+
+TYPE ENDPOINT
