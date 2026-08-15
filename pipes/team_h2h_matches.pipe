@@ -1,0 +1,88 @@
+DESCRIPTION >
+    İki takım arasındaki son H2H maçlarını getirir.
+
+    Dönen bilgiler:
+    - Match ID
+    - Tarih
+    - Ev sahibi
+    - Deplasman
+    - Skor
+
+    Parametreler:
+    team1
+    team2
+    country
+    league
+    season
+    limit
+
+    Limit varsayılan olarak 10 maçtır.
+
+NODE team_h2h_matches_query
+SQL >
+    %
+
+    SELECT
+
+        match_id,
+
+        toString(date) AS date,
+
+        home_team,
+
+        away_team,
+
+        concat(
+            toString(ft_home),
+            '-',
+            toString(ft_away)
+        ) AS score
+
+    FROM betexplorer_matches
+
+    WHERE
+
+        (
+            (
+                home_team = {{String(team1)}}
+                AND
+                away_team = {{String(team2)}}
+            )
+
+            OR
+
+            (
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+            )
+        )
+
+        AND ft_home IS NOT NULL
+        AND ft_away IS NOT NULL
+
+
+        {% if defined(country) %}
+        AND country = {{String(country)}}
+        {% end %}
+
+
+        {% if defined(league) %}
+        AND league = {{String(league)}}
+        {% end %}
+
+
+        {% if defined(season) %}
+        AND season = {{String(season)}}
+        {% end %}
+
+
+    ORDER BY
+        date DESC
+
+
+    LIMIT
+        {{Int32(limit, 10)}}
+
+
+TYPE ENDPOINT
