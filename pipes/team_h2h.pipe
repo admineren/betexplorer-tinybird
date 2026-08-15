@@ -1,27 +1,48 @@
 DESCRIPTION >
     İki takım arasındaki H2H analizi.
 
-    Genel karşılaşmalar,
-    Takım 1'in kendi sahasındaki karşılaşmalar,
-    Takım 2'nin kendi sahasındaki karşılaşmalar
-    ve son H2H maçları gösterilir.
+    Genel:
+    - Toplam maç
+    - Takım 1 galibiyet
+    - Beraberlik
+    - Takım 2 galibiyet
+    - Takım 1 / Takım 2 golleri
+    - Gol ortalamaları
+    - Over 1.5 / 2.5
+    - BTTS
 
-    Takım 1 perspektifinden:
+    Takım 1 sahasında:
+    - Maç
+    - G / B / M
+    - Goller
+    - Gol ortalamaları
 
-    team1_wins = Takım 1 galibiyeti
-    draws      = beraberlik
-    team2_wins = Takım 2 galibiyeti
+    Takım 2 sahasında:
+    - Maç
+    - G / B / M
+    - Goller
+    - Gol ortalamaları
 
-    İlk yarı ve ikinci yarı sonuçları da
-    takım perspektifinden hesaplanır.
+    İlk yarı:
+    - Takım 1 önde
+    - Beraberlik
+    - Takım 2 önde
+
+    İkinci yarı:
+    - Takım 1 üstün
+    - Eşit
+    - Takım 2 üstün
+
+    Son H2H maçları:
+    - Tarih
+    - Ev sahibi
+    - Deplasman
+    - Skor
+    - Match ID
 
     Parametreler:
-
     team1
     team2
-
-    Opsiyonel:
-
     country
     league
     season
@@ -32,189 +53,88 @@ NODE team_h2h_query
 SQL >
     %
 
-    /* =========================================================
-       GENEL
-       ========================================================= */
-
     SELECT
 
-        'general' AS section,
+        /* =====================================================
+           GENEL
+           ===================================================== */
 
-        toUInt8(1) AS section_order,
+        matches,
 
-        '' AS match_date,
-        '' AS home_team,
-        '' AS away_team,
-        '' AS score,
-        '' AS match_id,
-
-        count() AS matches,
-
-        countIf(
-
-            (
-                home_team = {{String(team1)}}
-                AND ft_home > ft_away
-            )
-
-            OR
-
-            (
-                away_team = {{String(team1)}}
-                AND ft_away > ft_home
-            )
-
-        ) AS team1_wins,
-
-        countIf(
-            ft_home = ft_away
-        ) AS draws,
-
-        countIf(
-
-            (
-                home_team = {{String(team2)}}
-                AND ft_home > ft_away
-            )
-
-            OR
-
-            (
-                away_team = {{String(team2)}}
-                AND ft_away > ft_home
-            )
-
-        ) AS team2_wins,
-
+        team1_wins,
+        draws,
+        team2_wins,
 
         round(
-            if(
-                count() = 0,
-                0,
-                team1_wins * 100.0 / count()
-            ),
+            if(matches = 0, 0, team1_wins * 100.0 / matches),
             2
         ) AS team1_win_pct,
 
         round(
-            if(
-                count() = 0,
-                0,
-                draws * 100.0 / count()
-            ),
+            if(matches = 0, 0, draws * 100.0 / matches),
             2
         ) AS draw_pct,
 
         round(
-            if(
-                count() = 0,
-                0,
-                team2_wins * 100.0 / count()
-            ),
+            if(matches = 0, 0, team2_wins * 100.0 / matches),
             2
         ) AS team2_win_pct,
 
 
-        sum(
-            if(
-                home_team = {{String(team1)}},
-                ft_home,
-                ft_away
-            )
-        ) AS team1_goals,
+        team1_goals,
+        team2_goals,
 
-        sum(
-            if(
-                home_team = {{String(team2)}},
-                ft_home,
-                ft_away
-            )
-        ) AS team2_goals,
+        team1_goals - team2_goals AS goal_difference,
 
 
         round(
-            if(
-                count() = 0,
-                0,
-                team1_goals * 1.0 / count()
-            ),
+            if(matches = 0, 0, team1_goals * 1.0 / matches),
             2
         ) AS team1_goals_avg,
 
         round(
-            if(
-                count() = 0,
-                0,
-                team2_goals * 1.0 / count()
-            ),
+            if(matches = 0, 0, team2_goals * 1.0 / matches),
             2
         ) AS team2_goals_avg,
 
-
         round(
             if(
-                count() = 0,
+                matches = 0,
                 0,
-                sum(ft_home + ft_away) * 1.0 / count()
+                (team1_goals + team2_goals) * 1.0 / matches
             ),
             2
         ) AS total_goals_avg,
 
 
-        countIf(
-            ft_home + ft_away > 1
-        ) AS over_1_5,
+        /* =====================================================
+           OVER / BTTS
+           ===================================================== */
 
-        countIf(
-            ft_home + ft_away > 2
-        ) AS over_2_5,
-
+        over_1_5,
+        over_2_5,
 
         round(
-            if(
-                count() = 0,
-                0,
-                over_1_5 * 100.0 / count()
-            ),
+            if(matches = 0, 0, over_1_5 * 100.0 / matches),
             2
         ) AS over_1_5_pct,
 
         round(
-            if(
-                count() = 0,
-                0,
-                over_2_5 * 100.0 / count()
-            ),
+            if(matches = 0, 0, over_2_5 * 100.0 / matches),
             2
         ) AS over_2_5_pct,
 
 
-        countIf(
-            ft_home > 0
-            AND ft_away > 0
-        ) AS btts_yes,
-
-        countIf(
-            ft_home = 0
-            OR ft_away = 0
-        ) AS btts_no,
-
+        btts_yes,
+        btts_no,
 
         round(
-            if(
-                count() = 0,
-                0,
-                btts_yes * 100.0 / count()
-            ),
+            if(matches = 0, 0, btts_yes * 100.0 / matches),
             2
         ) AS btts_yes_pct,
 
         round(
-            if(
-                count() = 0,
-                0,
-                btts_no * 100.0 / count()
-            ),
+            if(matches = 0, 0, btts_no * 100.0 / matches),
             2
         ) AS btts_no_pct,
 
@@ -223,734 +143,628 @@ SQL >
            İLK YARI
            ===================================================== */
 
-        countIf(
+        ht_matches,
 
-            (
-                home_team = {{String(team1)}}
-                AND ht_home > ht_away
-            )
+        ht_team1_wins,
+        ht_draws,
+        ht_team2_wins,
 
-            OR
+        round(
+            if(
+                ht_matches = 0,
+                0,
+                ht_team1_wins * 100.0 / ht_matches
+            ),
+            2
+        ) AS ht_team1_win_pct,
 
-            (
-                away_team = {{String(team1)}}
-                AND ht_away > ht_home
-            )
+        round(
+            if(
+                ht_matches = 0,
+                0,
+                ht_draws * 100.0 / ht_matches
+            ),
+            2
+        ) AS ht_draw_pct,
 
-        ) AS ht_team1_wins,
-
-
-        countIf(
-            ht_home = ht_away
-        ) AS ht_draws,
-
-
-        countIf(
-
-            (
-                home_team = {{String(team2)}}
-                AND ht_home > ht_away
-            )
-
-            OR
-
-            (
-                away_team = {{String(team2)}}
-                AND ht_away > ht_home
-            )
-
-        ) AS ht_team2_wins,
-
-
-        countIf(
-            ht_home IS NOT NULL
-            AND ht_away IS NOT NULL
-        ) AS ht_matches,
+        round(
+            if(
+                ht_matches = 0,
+                0,
+                ht_team2_wins * 100.0 / ht_matches
+            ),
+            2
+        ) AS ht_team2_win_pct,
 
 
         /* =====================================================
            İKİNCİ YARI
            ===================================================== */
 
-        countIf(
+        second_half_matches,
 
-            (
+        second_half_team1_wins,
+        second_half_draws,
+        second_half_team2_wins,
+
+        round(
+            if(
+                second_half_matches = 0,
+                0,
+                second_half_team1_wins * 100.0
+                / second_half_matches
+            ),
+            2
+        ) AS second_half_team1_win_pct,
+
+        round(
+            if(
+                second_half_matches = 0,
+                0,
+                second_half_draws * 100.0
+                / second_half_matches
+            ),
+            2
+        ) AS second_half_draw_pct,
+
+        round(
+            if(
+                second_half_matches = 0,
+                0,
+                second_half_team2_wins * 100.0
+                / second_half_matches
+            ),
+            2
+        ) AS second_half_team2_win_pct,
+
+
+        /* =====================================================
+           TEAM 1 SAHASINDA
+           ===================================================== */
+
+        team1_home_matches,
+        team1_home_wins,
+        team1_home_draws,
+        team1_home_losses,
+
+        round(
+            if(
+                team1_home_matches = 0,
+                0,
+                team1_home_wins * 100.0
+                / team1_home_matches
+            ),
+            2
+        ) AS team1_home_win_pct,
+
+
+        team1_home_goals,
+        team1_home_conceded,
+
+
+        round(
+            if(
+                team1_home_matches = 0,
+                0,
+                team1_home_goals * 1.0
+                / team1_home_matches
+            ),
+            2
+        ) AS team1_home_goals_avg,
+
+
+        round(
+            if(
+                team1_home_matches = 0,
+                0,
+                team1_home_conceded * 1.0
+                / team1_home_matches
+            ),
+            2
+        ) AS team1_home_conceded_avg,
+
+
+        /* =====================================================
+           TEAM 2 SAHASINDA
+           ===================================================== */
+
+        team2_home_matches,
+        team2_home_wins,
+        team2_home_draws,
+        team2_home_losses,
+
+        round(
+            if(
+                team2_home_matches = 0,
+                0,
+                team2_home_wins * 100.0
+                / team2_home_matches
+            ),
+            2
+        ) AS team2_home_win_pct,
+
+
+        team2_home_goals,
+        team2_home_conceded,
+
+
+        round(
+            if(
+                team2_home_matches = 0,
+                0,
+                team2_home_goals * 1.0
+                / team2_home_matches
+            ),
+            2
+        ) AS team2_home_goals_avg,
+
+
+        round(
+            if(
+                team2_home_matches = 0,
+                0,
+                team2_home_conceded * 1.0
+                / team2_home_matches
+            ),
+            2
+        ) AS team2_home_conceded_avg
+
+
+    FROM
+    (
+
+        SELECT
+
+
+            /* =================================================
+               GENEL MAÇ SAYISI
+               ================================================= */
+
+            count() AS matches,
+
+
+            /* =================================================
+               GENEL SONUÇ
+               ================================================= */
+
+            countIf(
+
+                (
+                    home_team = {{String(team1)}}
+                    AND ft_home > ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team1)}}
+                    AND ft_away > ft_home
+                )
+
+            ) AS team1_wins,
+
+
+            countIf(
+                ft_home = ft_away
+            ) AS draws,
+
+
+            countIf(
+
+                (
+                    home_team = {{String(team2)}}
+                    AND ft_home > ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team2)}}
+                    AND ft_away > ft_home
+                )
+
+            ) AS team2_wins,
+
+
+            /* =================================================
+               GOLLER
+               ================================================= */
+
+            sum(
+
+                if(
+                    home_team = {{String(team1)}},
+                    ft_home,
+                    ft_away
+                )
+
+            ) AS team1_goals,
+
+
+            sum(
+
+                if(
+                    home_team = {{String(team2)}},
+                    ft_home,
+                    ft_away
+                )
+
+            ) AS team2_goals,
+
+
+            /* =================================================
+               OVER
+               ================================================= */
+
+            countIf(
+                ft_home + ft_away >= 2
+            ) AS over_1_5,
+
+
+            countIf(
+                ft_home + ft_away >= 3
+            ) AS over_2_5,
+
+
+            /* =================================================
+               BTTS
+               ================================================= */
+
+            countIf(
+                ft_home > 0
+                AND
+                ft_away > 0
+            ) AS btts_yes,
+
+
+            countIf(
+                ft_home = 0
+                OR
+                ft_away = 0
+            ) AS btts_no,
+
+
+            /* =================================================
+               İLK YARI
+               ================================================= */
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+            ) AS ht_matches,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    (
+                        home_team = {{String(team1)}}
+                        AND ht_home > ht_away
+                    )
+
+                    OR
+
+                    (
+                        away_team = {{String(team1)}}
+                        AND ht_away > ht_home
+                    )
+                )
+
+            ) AS ht_team1_wins,
+
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+                AND
+                ht_home = ht_away
+            ) AS ht_draws,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    (
+                        home_team = {{String(team2)}}
+                        AND ht_home > ht_away
+                    )
+
+                    OR
+
+                    (
+                        away_team = {{String(team2)}}
+                        AND ht_away > ht_home
+                    )
+                )
+
+            ) AS ht_team2_wins,
+
+
+            /* =================================================
+               İKİNCİ YARI
+               ================================================= */
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+            ) AS second_half_matches,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    (
+                        home_team = {{String(team1)}}
+                        AND
+                        (
+                            ft_home - ht_home
+                            >
+                            ft_away - ht_away
+                        )
+                    )
+
+                    OR
+
+                    (
+                        away_team = {{String(team1)}}
+                        AND
+                        (
+                            ft_away - ht_away
+                            >
+                            ft_home - ht_home
+                        )
+                    )
+                )
+
+            ) AS second_half_team1_wins,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    ft_home - ht_home
+                )
+                =
+                (
+                    ft_away - ht_away
+                )
+
+            ) AS second_half_draws,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    (
+                        home_team = {{String(team2)}}
+                        AND
+                        (
+                            ft_home - ht_home
+                            >
+                            ft_away - ht_away
+                        )
+                    )
+
+                    OR
+
+                    (
+                        away_team = {{String(team2)}}
+                        AND
+                        (
+                            ft_away - ht_away
+                            >
+                            ft_home - ht_home
+                        )
+                    )
+                )
+
+            ) AS second_half_team2_wins,
+
+
+            /* =================================================
+               TEAM 1 SAHASINDA
+               ================================================= */
+
+            countIf(
                 home_team = {{String(team1)}}
-
                 AND
+                away_team = {{String(team2)}}
+            ) AS team1_home_matches,
 
-                (
-                    ft_home - ht_home
-                    >
-                    ft_away - ht_away
-                )
-            )
 
-            OR
+            countIf(
 
-            (
-                away_team = {{String(team1)}}
-
+                home_team = {{String(team1)}}
                 AND
-
-                (
-                    ft_away - ht_away
-                    >
-                    ft_home - ht_home
-                )
-            )
-
-        ) AS second_half_team1_wins,
-
-
-        countIf(
-
-            (
-                ft_home - ht_home
-            )
-            =
-            (
-                ft_away - ht_away
-            )
-
-        ) AS second_half_draws,
-
-
-        countIf(
-
-            (
-                home_team = {{String(team2)}}
-
+                away_team = {{String(team2)}}
                 AND
+                ft_home > ft_away
 
-                (
-                    ft_home - ht_home
-                    >
-                    ft_away - ht_away
-                )
-            )
+            ) AS team1_home_wins,
 
-            OR
 
-            (
+            countIf(
+
+                home_team = {{String(team1)}}
+                AND
+                away_team = {{String(team2)}}
+                AND
+                ft_home = ft_away
+
+            ) AS team1_home_draws,
+
+
+            countIf(
+
+                home_team = {{String(team1)}}
+                AND
+                away_team = {{String(team2)}}
+                AND
+                ft_home < ft_away
+
+            ) AS team1_home_losses,
+
+
+            sumIf(
+                ft_home,
+
+                home_team = {{String(team1)}}
+                AND
                 away_team = {{String(team2)}}
 
+            ) AS team1_home_goals,
+
+
+            sumIf(
+                ft_away,
+
+                home_team = {{String(team1)}}
                 AND
+                away_team = {{String(team2)}}
+
+            ) AS team1_home_conceded,
+
+
+            /* =================================================
+               TEAM 2 SAHASINDA
+               ================================================= */
+
+            countIf(
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+            ) AS team2_home_matches,
+
+
+            countIf(
+
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+                AND
+                ft_away > ft_home
+
+            ) AS team2_home_wins,
+
+
+            countIf(
+
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+                AND
+                ft_home = ft_away
+
+            ) AS team2_home_draws,
+
+
+            countIf(
+
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+                AND
+                ft_away < ft_home
+
+            ) AS team2_home_losses,
+
+
+            sumIf(
+                ft_home,
+
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+
+            ) AS team2_home_goals,
+
+
+            sumIf(
+                ft_away,
+
+                home_team = {{String(team2)}}
+                AND
+                away_team = {{String(team1)}}
+
+            ) AS team2_home_conceded
+
+
+        FROM betexplorer_matches
+
+
+        WHERE
+
+            (
+                (
+                    home_team = {{String(team1)}}
+                    AND
+                    away_team = {{String(team2)}}
+                )
+
+                OR
 
                 (
-                    ft_away - ht_away
-                    >
-                    ft_home - ht_home
+                    home_team = {{String(team2)}}
+                    AND
+                    away_team = {{String(team1)}}
                 )
             )
 
-        ) AS second_half_team2_wins,
 
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
 
-        countIf(
-            ht_home IS NOT NULL
-            AND ht_away IS NOT NULL
-        ) AS second_half_matches
 
+            {% if defined(country) %}
+            AND country = {{String(country)}}
+            {% end %}
 
-    FROM betexplorer_matches
 
+            {% if defined(league) %}
+            AND league = {{String(league)}}
+            {% end %}
 
-    WHERE
 
-        (
-            (
-                home_team = {{String(team1)}}
-                AND away_team = {{String(team2)}}
-            )
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
 
-            OR
-
-            (
-                home_team = {{String(team2)}}
-                AND away_team = {{String(team1)}}
-            )
-        )
-
-        AND ft_home IS NOT NULL
-        AND ft_away IS NOT NULL
-
-
-        {% if defined(country) %}
-        AND country = {{String(country)}}
-        {% end %}
-
-
-        {% if defined(league) %}
-        AND league = {{String(league)}}
-        {% end %}
-
-
-        {% if defined(season) %}
-        AND season = {{String(season)}}
-        {% end %}
-
-
-    /* =========================================================
-       TAKIM 1 KENDİ SAHASINDA
-       ========================================================= */
-
-    UNION ALL
-
-    SELECT
-
-        'team1_home' AS section,
-
-        toUInt8(2) AS section_order,
-
-        '' AS match_date,
-        '' AS home_team,
-        '' AS away_team,
-        '' AS score,
-        '' AS match_id,
-
-        count() AS matches,
-
-        countIf(
-            ft_home > ft_away
-        ) AS team1_wins,
-
-        countIf(
-            ft_home = ft_away
-        ) AS draws,
-
-        countIf(
-            ft_home < ft_away
-        ) AS team2_wins,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                team1_wins * 100.0 / count()
-            ),
-            2
-        ) AS team1_win_pct,
-
-        round(
-            if(
-                count() = 0,
-                0,
-                draws * 100.0 / count()
-            ),
-            2
-        ) AS draw_pct,
-
-        round(
-            if(
-                count() = 0,
-                0,
-                team2_wins * 100.0 / count()
-            ),
-            2
-        ) AS team2_win_pct,
-
-
-        sum(ft_home) AS team1_goals,
-        sum(ft_away) AS team2_goals,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                sum(ft_home) * 1.0 / count()
-            ),
-            2
-        ) AS team1_goals_avg,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                sum(ft_away) * 1.0 / count()
-            ),
-            2
-        ) AS team2_goals_avg,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                sum(ft_home + ft_away) * 1.0 / count()
-            ),
-            2
-        ) AS total_goals_avg,
-
-
-        countIf(
-            ft_home + ft_away > 1
-        ) AS over_1_5,
-
-        countIf(
-            ft_home + ft_away > 2
-        ) AS over_2_5,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                over_1_5 * 100.0 / count()
-            ),
-            2
-        ) AS over_1_5_pct,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                over_2_5 * 100.0 / count()
-            ),
-            2
-        ) AS over_2_5_pct,
-
-
-        countIf(
-            ft_home > 0
-            AND ft_away > 0
-        ) AS btts_yes,
-
-        countIf(
-            ft_home = 0
-            OR ft_away = 0
-        ) AS btts_no,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                btts_yes * 100.0 / count()
-            ),
-            2
-        ) AS btts_yes_pct,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                btts_no * 100.0 / count()
-            ),
-            2
-        ) AS btts_no_pct,
-
-
-        countIf(
-            ht_home > ht_away
-        ) AS ht_team1_wins,
-
-        countIf(
-            ht_home = ht_away
-        ) AS ht_draws,
-
-        countIf(
-            ht_home < ht_away
-        ) AS ht_team2_wins,
-
-        countIf(
-            ht_home IS NOT NULL
-            AND ht_away IS NOT NULL
-        ) AS ht_matches,
-
-
-        countIf(
-            (ft_home - ht_home)
-            >
-            (ft_away - ht_away)
-        ) AS second_half_team1_wins,
-
-        countIf(
-            (ft_home - ht_home)
-            =
-            (ft_away - ht_away)
-        ) AS second_half_draws,
-
-        countIf(
-            (ft_home - ht_home)
-            <
-            (ft_away - ht_away)
-        ) AS second_half_team2_wins,
-
-        countIf(
-            ht_home IS NOT NULL
-            AND ht_away IS NOT NULL
-        ) AS second_half_matches
-
-
-    FROM betexplorer_matches
-
-
-    WHERE
-
-        home_team = {{String(team1)}}
-        AND away_team = {{String(team2)}}
-
-        AND ft_home IS NOT NULL
-        AND ft_away IS NOT NULL
-
-
-        {% if defined(country) %}
-        AND country = {{String(country)}}
-        {% end %}
-
-
-        {% if defined(league) %}
-        AND league = {{String(league)}}
-        {% end %}
-
-
-        {% if defined(season) %}
-        AND season = {{String(season)}}
-        {% end %}
-
-
-    /* =========================================================
-       TAKIM 2 KENDİ SAHASINDA
-       ========================================================= */
-
-    UNION ALL
-
-    SELECT
-
-        'team2_home' AS section,
-
-        toUInt8(3) AS section_order,
-
-        '' AS match_date,
-        '' AS home_team,
-        '' AS away_team,
-        '' AS score,
-        '' AS match_id,
-
-        count() AS matches,
-
-        countIf(
-            ft_home < ft_away
-        ) AS team1_wins,
-
-        countIf(
-            ft_home = ft_away
-        ) AS draws,
-
-        countIf(
-            ft_home > ft_away
-        ) AS team2_wins,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                team1_wins * 100.0 / count()
-            ),
-            2
-        ) AS team1_win_pct,
-
-        round(
-            if(
-                count() = 0,
-                0,
-                draws * 100.0 / count()
-            ),
-            2
-        ) AS draw_pct,
-
-        round(
-            if(
-                count() = 0,
-                0,
-                team2_wins * 100.0 / count()
-            ),
-            2
-        ) AS team2_win_pct,
-
-
-        sum(ft_away) AS team1_goals,
-        sum(ft_home) AS team2_goals,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                sum(ft_away) * 1.0 / count()
-            ),
-            2
-        ) AS team1_goals_avg,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                sum(ft_home) * 1.0 / count()
-            ),
-            2
-        ) AS team2_goals_avg,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                sum(ft_home + ft_away) * 1.0 / count()
-            ),
-            2
-        ) AS total_goals_avg,
-
-
-        countIf(
-            ft_home + ft_away > 1
-        ) AS over_1_5,
-
-        countIf(
-            ft_home + ft_away > 2
-        ) AS over_2_5,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                over_1_5 * 100.0 / count()
-            ),
-            2
-        ) AS over_1_5_pct,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                over_2_5 * 100.0 / count()
-            ),
-            2
-        ) AS over_2_5_pct,
-
-
-        countIf(
-            ft_home > 0
-            AND ft_away > 0
-        ) AS btts_yes,
-
-        countIf(
-            ft_home = 0
-            OR ft_away = 0
-        ) AS btts_no,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                btts_yes * 100.0 / count()
-            ),
-            2
-        ) AS btts_yes_pct,
-
-
-        round(
-            if(
-                count() = 0,
-                0,
-                btts_no * 100.0 / count()
-            ),
-            2
-        ) AS btts_no_pct,
-
-
-        countIf(
-            ht_home < ht_away
-        ) AS ht_team1_wins,
-
-        countIf(
-            ht_home = ht_away
-        ) AS ht_draws,
-
-        countIf(
-            ht_home > ht_away
-        ) AS ht_team2_wins,
-
-        countIf(
-            ht_home IS NOT NULL
-            AND ht_away IS NOT NULL
-        ) AS ht_matches,
-
-
-        countIf(
-            (ft_home - ht_home)
-            <
-            (ft_away - ht_away)
-        ) AS second_half_team1_wins,
-
-        countIf(
-            (ft_home - ht_home)
-            =
-            (ft_away - ht_away)
-        ) AS second_half_draws,
-
-        countIf(
-            (ft_home - ht_home)
-            >
-            (ft_away - ht_away)
-        ) AS second_half_team2_wins,
-
-        countIf(
-            ht_home IS NOT NULL
-            AND ht_away IS NOT NULL
-        ) AS second_half_matches
-
-
-    FROM betexplorer_matches
-
-
-    WHERE
-
-        home_team = {{String(team2)}}
-        AND away_team = {{String(team1)}}
-
-        AND ft_home IS NOT NULL
-        AND ft_away IS NOT NULL
-
-
-        {% if defined(country) %}
-        AND country = {{String(country)}}
-        {% end %}
-
-
-        {% if defined(league) %}
-        AND league = {{String(league)}}
-        {% end %}
-
-
-        {% if defined(season) %}
-        AND season = {{String(season)}}
-        {% end %}
-
-
-    /* =========================================================
-       SON H2H MAÇLARI
-       ========================================================= */
-
-    UNION ALL
-
-    SELECT
-
-        'recent' AS section,
-
-        toUInt8(4) AS section_order,
-
-        toString(date) AS match_date,
-
-        home_team,
-        away_team,
-
-        concat(
-            toString(ft_home),
-            '-',
-            toString(ft_away)
-        ) AS score,
-
-        toString(match_id) AS match_id,
-
-
-        toUInt64(0) AS matches,
-
-        toUInt64(0) AS team1_wins,
-        toUInt64(0) AS draws,
-        toUInt64(0) AS team2_wins,
-
-        toFloat64(0) AS team1_win_pct,
-        toFloat64(0) AS draw_pct,
-        toFloat64(0) AS team2_win_pct,
-
-        toUInt64(0) AS team1_goals,
-        toUInt64(0) AS team2_goals,
-
-        toFloat64(0) AS team1_goals_avg,
-        toFloat64(0) AS team2_goals_avg,
-        toFloat64(0) AS total_goals_avg,
-
-        toUInt64(0) AS over_1_5,
-        toUInt64(0) AS over_2_5,
-
-        toFloat64(0) AS over_1_5_pct,
-        toFloat64(0) AS over_2_5_pct,
-
-        toUInt64(0) AS btts_yes,
-        toUInt64(0) AS btts_no,
-
-        toFloat64(0) AS btts_yes_pct,
-        toFloat64(0) AS btts_no_pct,
-
-        toUInt64(0) AS ht_team1_wins,
-        toUInt64(0) AS ht_draws,
-        toUInt64(0) AS ht_team2_wins,
-        toUInt64(0) AS ht_matches,
-
-        toUInt64(0) AS second_half_team1_wins,
-        toUInt64(0) AS second_half_draws,
-        toUInt64(0) AS second_half_team2_wins,
-        toUInt64(0) AS second_half_matches
-
-
-    FROM betexplorer_matches
-
-
-    WHERE
-
-        (
-            (
-                home_team = {{String(team1)}}
-                AND away_team = {{String(team2)}}
-            )
-
-            OR
-
-            (
-                home_team = {{String(team2)}}
-                AND away_team = {{String(team1)}}
-            )
-        )
-
-        AND ft_home IS NOT NULL
-        AND ft_away IS NOT NULL
-
-
-        {% if defined(country) %}
-        AND country = {{String(country)}}
-        {% end %}
-
-
-        {% if defined(league) %}
-        AND league = {{String(league)}}
-        {% end %}
-
-
-        {% if defined(season) %}
-        AND season = {{String(season)}}
-        {% end %}
-
-
-    ORDER BY
-
-        section_order,
-
-        match_date DESC
-
-
-    LIMIT {{Int32(limit, 10)}}
+    )
 
 
 TYPE ENDPOINT
