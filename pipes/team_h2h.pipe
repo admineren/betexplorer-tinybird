@@ -26,6 +26,7 @@ DESCRIPTION >
 
 NODE team_h2h_query
 SQL >
+%
     WITH base AS
     (
 
