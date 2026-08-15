@@ -1,7 +1,7 @@
 DESCRIPTION >
     Takım genel performans analizi
 
-NODE team_general
+NODE team_general_query
 SQL >
     %
     SELECT
