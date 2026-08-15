@@ -1,0 +1,520 @@
+DESCRIPTION >
+    Takım gol analizi.
+    Toplam gol, takımın attığı/yediği gol dağılımı,
+    Over, BTTS, ilk yarı ve ikinci yarı gol profillerini döndürür.
+
+NODE team_goals_query
+SQL >
+    %
+
+    SELECT
+
+        /* =========================================================
+           TOPLAM MAÇ
+           ========================================================= */
+
+        matches,
+
+        /* =========================================================
+           TOPLAM GOL
+           ========================================================= */
+
+        total_goals_avg,
+
+        max_total_goals,
+
+        total_goals_0_1,
+        total_goals_2_3,
+        total_goals_4_5,
+        total_goals_6_plus,
+
+        round(
+            if(matches = 0, 0, total_goals_0_1 * 100.0 / matches),
+            2
+        ) AS total_goals_0_1_pct,
+
+        round(
+            if(matches = 0, 0, total_goals_2_3 * 100.0 / matches),
+            2
+        ) AS total_goals_2_3_pct,
+
+        round(
+            if(matches = 0, 0, total_goals_4_5 * 100.0 / matches),
+            2
+        ) AS total_goals_4_5_pct,
+
+        round(
+            if(matches = 0, 0, total_goals_6_plus * 100.0 / matches),
+            2
+        ) AS total_goals_6_plus_pct,
+
+
+        /* =========================================================
+           TAKIMIN ATTIĞI GOL DAĞILIMI
+           ========================================================= */
+
+        team_goals_0,
+        team_goals_1,
+        team_goals_2_3,
+        team_goals_4_5,
+        team_goals_6_plus,
+
+        round(
+            if(matches = 0, 0, team_goals_0 * 100.0 / matches),
+            2
+        ) AS team_goals_0_pct,
+
+        round(
+            if(matches = 0, 0, team_goals_1 * 100.0 / matches),
+            2
+        ) AS team_goals_1_pct,
+
+        round(
+            if(matches = 0, 0, team_goals_2_3 * 100.0 / matches),
+            2
+        ) AS team_goals_2_3_pct,
+
+        round(
+            if(matches = 0, 0, team_goals_4_5 * 100.0 / matches),
+            2
+        ) AS team_goals_4_5_pct,
+
+        round(
+            if(matches = 0, 0, team_goals_6_plus * 100.0 / matches),
+            2
+        ) AS team_goals_6_plus_pct,
+
+
+        /* =========================================================
+           TAKIMIN YEDİĞİ GOL DAĞILIMI
+           ========================================================= */
+
+        conceded_goals_0,
+        conceded_goals_1,
+        conceded_goals_2_3,
+        conceded_goals_4_5,
+        conceded_goals_6_plus,
+
+        round(
+            if(matches = 0, 0, conceded_goals_0 * 100.0 / matches),
+            2
+        ) AS conceded_goals_0_pct,
+
+        round(
+            if(matches = 0, 0, conceded_goals_1 * 100.0 / matches),
+            2
+        ) AS conceded_goals_1_pct,
+
+        round(
+            if(matches = 0, 0, conceded_goals_2_3 * 100.0 / matches),
+            2
+        ) AS conceded_goals_2_3_pct,
+
+        round(
+            if(matches = 0, 0, conceded_goals_4_5 * 100.0 / matches),
+            2
+        ) AS conceded_goals_4_5_pct,
+
+        round(
+            if(matches = 0, 0, conceded_goals_6_plus * 100.0 / matches),
+            2
+        ) AS conceded_goals_6_plus_pct,
+
+
+        /* =========================================================
+           OVER
+           ========================================================= */
+
+        over_1_5,
+        over_2_5,
+        over_3_5,
+        over_4_5,
+
+        round(
+            if(matches = 0, 0, over_1_5 * 100.0 / matches),
+            2
+        ) AS over_1_5_pct,
+
+        round(
+            if(matches = 0, 0, over_2_5 * 100.0 / matches),
+            2
+        ) AS over_2_5_pct,
+
+        round(
+            if(matches = 0, 0, over_3_5 * 100.0 / matches),
+            2
+        ) AS over_3_5_pct,
+
+        round(
+            if(matches = 0, 0, over_4_5 * 100.0 / matches),
+            2
+        ) AS over_4_5_pct,
+
+
+        /* =========================================================
+           BTTS
+           ========================================================= */
+
+        btts_yes,
+        btts_no,
+
+        round(
+            if(matches = 0, 0, btts_yes * 100.0 / matches),
+            2
+        ) AS btts_yes_pct,
+
+        round(
+            if(matches = 0, 0, btts_no * 100.0 / matches),
+            2
+        ) AS btts_no_pct,
+
+
+        /* =========================================================
+           İLK YARI
+           ========================================================= */
+
+        ht_total_goals_0,
+        ht_total_goals_1,
+        ht_total_goals_2,
+        ht_total_goals_3_plus,
+
+        ht_over_0_5,
+        ht_over_1_5,
+        ht_over_2_5,
+
+        round(
+            if(matches = 0, 0, ht_over_0_5 * 100.0 / matches),
+            2
+        ) AS ht_over_0_5_pct,
+
+        round(
+            if(matches = 0, 0, ht_over_1_5 * 100.0 / matches),
+            2
+        ) AS ht_over_1_5_pct,
+
+        round(
+            if(matches = 0, 0, ht_over_2_5 * 100.0 / matches),
+            2
+        ) AS ht_over_2_5_pct,
+
+
+        /* =========================================================
+           İKİNCİ YARI
+           ========================================================= */
+
+        second_half_total_goals_0,
+        second_half_total_goals_1,
+        second_half_total_goals_2,
+        second_half_total_goals_3_plus,
+
+        second_half_over_0_5,
+        second_half_over_1_5,
+        second_half_over_2_5,
+
+        round(
+            if(matches = 0, 0, second_half_over_0_5 * 100.0 / matches),
+            2
+        ) AS second_half_over_0_5_pct,
+
+        round(
+            if(matches = 0, 0, second_half_over_1_5 * 100.0 / matches),
+            2
+        ) AS second_half_over_1_5_pct,
+
+        round(
+            if(matches = 0, 0, second_half_over_2_5 * 100.0 / matches),
+            2
+        ) AS second_half_over_2_5_pct
+
+
+    FROM
+    (
+        SELECT
+
+            /* =====================================================
+               MAÇ
+               ===================================================== */
+
+            count() AS matches,
+
+
+            /* =====================================================
+               TOPLAM GOL
+               ===================================================== */
+
+            avg(
+                ft_home + ft_away
+            ) AS total_goals_avg,
+
+            max(
+                ft_home + ft_away
+            ) AS max_total_goals,
+
+            countIf(
+                ft_home + ft_away <= 1
+            ) AS total_goals_0_1,
+
+            countIf(
+                ft_home + ft_away BETWEEN 2 AND 3
+            ) AS total_goals_2_3,
+
+            countIf(
+                ft_home + ft_away BETWEEN 4 AND 5
+            ) AS total_goals_4_5,
+
+            countIf(
+                ft_home + ft_away >= 6
+            ) AS total_goals_6_plus,
+
+
+            /* =====================================================
+               TAKIMIN ATTIĞI GOL
+               ===================================================== */
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                ) = 0
+            ) AS team_goals_0,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                ) = 1
+            ) AS team_goals_1,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                ) BETWEEN 2 AND 3
+            ) AS team_goals_2_3,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                ) BETWEEN 4 AND 5
+            ) AS team_goals_4_5,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                ) >= 6
+            ) AS team_goals_6_plus,
+
+
+            /* =====================================================
+               TAKIMIN YEDİĞİ GOL
+               ===================================================== */
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                ) = 0
+            ) AS conceded_goals_0,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                ) = 1
+            ) AS conceded_goals_1,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                ) BETWEEN 2 AND 3
+            ) AS conceded_goals_2_3,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                ) BETWEEN 4 AND 5
+            ) AS conceded_goals_4_5,
+
+            countIf(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                ) >= 6
+            ) AS conceded_goals_6_plus,
+
+
+            /* =====================================================
+               OVER
+               ===================================================== */
+
+            countIf(
+                ft_home + ft_away >= 2
+            ) AS over_1_5,
+
+            countIf(
+                ft_home + ft_away >= 3
+            ) AS over_2_5,
+
+            countIf(
+                ft_home + ft_away >= 4
+            ) AS over_3_5,
+
+            countIf(
+                ft_home + ft_away >= 5
+            ) AS over_4_5,
+
+
+            /* =====================================================
+               BTTS
+               ===================================================== */
+
+            countIf(
+                ft_home > 0
+                AND
+                ft_away > 0
+            ) AS btts_yes,
+
+            countIf(
+                ft_home = 0
+                OR
+                ft_away = 0
+            ) AS btts_no,
+
+
+            /* =====================================================
+               İLK YARI TOPLAM GOL DAĞILIMI
+               ===================================================== */
+
+            countIf(
+                ht_home + ht_away = 0
+            ) AS ht_total_goals_0,
+
+            countIf(
+                ht_home + ht_away = 1
+            ) AS ht_total_goals_1,
+
+            countIf(
+                ht_home + ht_away = 2
+            ) AS ht_total_goals_2,
+
+            countIf(
+                ht_home + ht_away >= 3
+            ) AS ht_total_goals_3_plus,
+
+
+            /* =====================================================
+               İLK YARI OVER
+               ===================================================== */
+
+            countIf(
+                ht_home + ht_away >= 1
+            ) AS ht_over_0_5,
+
+            countIf(
+                ht_home + ht_away >= 2
+            ) AS ht_over_1_5,
+
+            countIf(
+                ht_home + ht_away >= 3
+            ) AS ht_over_2_5,
+
+
+            /* =====================================================
+               İKİNCİ YARI TOPLAM GOL DAĞILIMI
+               ===================================================== */
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) = 0
+            ) AS second_half_total_goals_0,
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) = 1
+            ) AS second_half_total_goals_1,
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) = 2
+            ) AS second_half_total_goals_2,
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) >= 3
+            ) AS second_half_total_goals_3_plus,
+
+
+            /* =====================================================
+               İKİNCİ YARI OVER
+               ===================================================== */
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) >= 1
+            ) AS second_half_over_0_5,
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) >= 2
+            ) AS second_half_over_1_5,
+
+            countIf(
+                (ft_home - ht_home)
+                +
+                (ft_away - ht_away) >= 3
+            ) AS second_half_over_2_5
+
+
+        FROM betexplorer_matches
+
+        WHERE
+            (
+                home_team = {{String(team)}}
+                OR
+                away_team = {{String(team)}}
+            )
+
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
+            AND ht_home IS NOT NULL
+            AND ht_away IS NOT NULL
+
+            /* =====================================================
+               OPSİYONEL FİLTRELER
+               ===================================================== */
+
+            {% if defined(country) %}
+            AND country = {{String(country)}}
+            {% end %}
+
+            {% if defined(league) %}
+            AND league = {{String(league)}}
+            {% end %}
+
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
+    )
+
+
+TYPE ENDPOINT
