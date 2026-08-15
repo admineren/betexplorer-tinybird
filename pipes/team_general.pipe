@@ -4,6 +4,7 @@ DESCRIPTION >
 
 NODE team_general_query
 SQL >
+%
     SELECT
 
         /* =====================================================
