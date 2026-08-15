@@ -4,13 +4,27 @@ DESCRIPTION >
     Takımın ilk yarı sonucunun maç sonucuna nasıl dönüştüğünü
     takımın kendi perspektifinden hesaplar.
 
-    H = İlk yarıda takım önde
-    D = İlk yarı berabere
-    A = İlk yarıda takım geride
+    G = İlk yarıda takım galibiyet durumunda / önde
+    B = İlk yarı beraberlik
+    M = İlk yarıda takım mağlubiyet durumunda / geride
 
     Aynı mantık maç sonucu için de uygulanır.
 
     Ev sahibi ve deplasman maçları takım perspektifine çevrilir.
+
+    Örnek:
+
+    G → G = İlk yarı önde → maçı kazandı
+    G → B = İlk yarı önde → berabere kaldı
+    G → M = İlk yarı önde → maçı kaybetti
+
+    B → G = İlk yarı beraber → maçı kazandı
+    B → B = İlk yarı beraber → berabere kaldı
+    B → M = İlk yarı beraber → maçı kaybetti
+
+    M → G = İlk yarı geride → maçı kazandı
+    M → B = İlk yarı geride → berabere kaldı
+    M → M = İlk yarı geride → maçı kaybetti
 
     Opsiyonel filtreler:
     country
@@ -28,53 +42,75 @@ SQL >
 
         /* =====================================================
            9 HT / FT KOMBİNASYONU
+
+           G = Galibiyet / takım önde
+           B = Beraberlik
+           M = Mağlubiyet / takım geride
            ===================================================== */
 
-        ht_h_ft_h,
-        ht_h_ft_d,
-        ht_h_ft_a,
+        ht_g_ft_g,
+        ht_g_ft_b,
+        ht_g_ft_m,
 
-        ht_d_ft_h,
-        ht_d_ft_d,
-        ht_d_ft_a,
+        ht_b_ft_g,
+        ht_b_ft_b,
+        ht_b_ft_m,
 
-        ht_a_ft_h,
-        ht_a_ft_d,
-        ht_a_ft_a,
+        ht_m_ft_g,
+        ht_m_ft_b,
+        ht_m_ft_m,
 
 
         /* =====================================================
            YÜZDELER
            ===================================================== */
 
-        round(if(matches = 0, 0, ht_h_ft_h * 100.0 / matches), 2)
-            AS ht_h_ft_h_pct,
+        round(
+            if(matches = 0, 0, ht_g_ft_g * 100.0 / matches),
+            2
+        ) AS ht_g_ft_g_pct,
 
-        round(if(matches = 0, 0, ht_h_ft_d * 100.0 / matches), 2)
-            AS ht_h_ft_d_pct,
+        round(
+            if(matches = 0, 0, ht_g_ft_b * 100.0 / matches),
+            2
+        ) AS ht_g_ft_b_pct,
 
-        round(if(matches = 0, 0, ht_h_ft_a * 100.0 / matches), 2)
-            AS ht_h_ft_a_pct,
-
-
-        round(if(matches = 0, 0, ht_d_ft_h * 100.0 / matches), 2)
-            AS ht_d_ft_h_pct,
-
-        round(if(matches = 0, 0, ht_d_ft_d * 100.0 / matches), 2)
-            AS ht_d_ft_d_pct,
-
-        round(if(matches = 0, 0, ht_d_ft_a * 100.0 / matches), 2)
-            AS ht_d_ft_a_pct,
+        round(
+            if(matches = 0, 0, ht_g_ft_m * 100.0 / matches),
+            2
+        ) AS ht_g_ft_m_pct,
 
 
-        round(if(matches = 0, 0, ht_a_ft_h * 100.0 / matches), 2)
-            AS ht_a_ft_h_pct,
+        round(
+            if(matches = 0, 0, ht_b_ft_g * 100.0 / matches),
+            2
+        ) AS ht_b_ft_g_pct,
 
-        round(if(matches = 0, 0, ht_a_ft_d * 100.0 / matches), 2)
-            AS ht_a_ft_d_pct,
+        round(
+            if(matches = 0, 0, ht_b_ft_b * 100.0 / matches),
+            2
+        ) AS ht_b_ft_b_pct,
 
-        round(if(matches = 0, 0, ht_a_ft_a * 100.0 / matches), 2)
-            AS ht_a_ft_a_pct,
+        round(
+            if(matches = 0, 0, ht_b_ft_m * 100.0 / matches),
+            2
+        ) AS ht_b_ft_m_pct,
+
+
+        round(
+            if(matches = 0, 0, ht_m_ft_g * 100.0 / matches),
+            2
+        ) AS ht_m_ft_g_pct,
+
+        round(
+            if(matches = 0, 0, ht_m_ft_b * 100.0 / matches),
+            2
+        ) AS ht_m_ft_b_pct,
+
+        round(
+            if(matches = 0, 0, ht_m_ft_m * 100.0 / matches),
+            2
+        ) AS ht_m_ft_m_pct,
 
 
         /* =====================================================
@@ -86,25 +122,34 @@ SQL >
         ht_losses,
 
 
-        round(if(matches = 0, 0, ht_wins * 100.0 / matches), 2)
-            AS ht_wins_pct,
+        round(
+            if(matches = 0, 0, ht_wins * 100.0 / matches),
+            2
+        ) AS ht_wins_pct,
 
-        round(if(matches = 0, 0, ht_draws * 100.0 / matches), 2)
-            AS ht_draws_pct,
+        round(
+            if(matches = 0, 0, ht_draws * 100.0 / matches),
+            2
+        ) AS ht_draws_pct,
 
-        round(if(matches = 0, 0, ht_losses * 100.0 / matches), 2)
-            AS ht_losses_pct,
+        round(
+            if(matches = 0, 0, ht_losses * 100.0 / matches),
+            2
+        ) AS ht_losses_pct,
 
 
         /* =====================================================
            GERİ DÖNÜŞLER
+
+           M → G = İlk yarı geride → maç sonunda galibiyet
+           M → B = İlk yarı geride → maç sonunda beraberlik
            ===================================================== */
 
-        ht_a_ft_h AS comeback_win,
-        ht_a_ft_d AS comeback_draw,
+        ht_m_ft_g AS comeback_win,
+        ht_m_ft_b AS comeback_draw,
 
         (
-            ht_a_ft_h + ht_a_ft_d
+            ht_m_ft_g + ht_m_ft_b
         ) AS comeback_total,
 
 
@@ -112,7 +157,7 @@ SQL >
             if(
                 ht_losses = 0,
                 0,
-                ht_a_ft_h * 100.0 / ht_losses
+                ht_m_ft_g * 100.0 / ht_losses
             ),
             2
         ) AS comeback_win_pct,
@@ -122,7 +167,7 @@ SQL >
             if(
                 ht_losses = 0,
                 0,
-                ht_a_ft_d * 100.0 / ht_losses
+                ht_m_ft_b * 100.0 / ht_losses
             ),
             2
         ) AS comeback_draw_pct,
@@ -130,13 +175,16 @@ SQL >
 
         /* =====================================================
            ÖNDEYKEN PUAN KAYBI
+
+           G → B = İlk yarı önde → maç sonunda beraberlik
+           G → M = İlk yarı önde → maç sonunda mağlubiyet
            ===================================================== */
 
-        ht_h_ft_d AS lead_lost_draw,
-        ht_h_ft_a AS lead_lost_loss,
+        ht_g_ft_b AS lead_lost_draw,
+        ht_g_ft_m AS lead_lost_loss,
 
         (
-            ht_h_ft_d + ht_h_ft_a
+            ht_g_ft_b + ht_g_ft_m
         ) AS lead_lost_total,
 
 
@@ -144,7 +192,7 @@ SQL >
             if(
                 ht_wins = 0,
                 0,
-                ht_h_ft_d * 100.0 / ht_wins
+                ht_g_ft_b * 100.0 / ht_wins
             ),
             2
         ) AS lead_lost_draw_pct,
@@ -154,7 +202,7 @@ SQL >
             if(
                 ht_wins = 0,
                 0,
-                ht_h_ft_a * 100.0 / ht_wins
+                ht_g_ft_m * 100.0 / ht_wins
             ),
             2
         ) AS lead_lost_loss_pct,
@@ -162,15 +210,17 @@ SQL >
 
         /* =====================================================
            İLK YARIDA ÖNDEYKEN MAÇI KAZANMA
+
+           G → G
            ===================================================== */
 
-        ht_h_ft_h AS lead_to_win,
+        ht_g_ft_g AS lead_to_win,
 
         round(
             if(
                 ht_wins = 0,
                 0,
-                ht_h_ft_h * 100.0 / ht_wins
+                ht_g_ft_g * 100.0 / ht_wins
             ),
             2
         ) AS lead_to_win_pct,
@@ -178,15 +228,17 @@ SQL >
 
         /* =====================================================
            İLK YARIDA GERİDEYKEN MAÇI KAZANMA
+
+           M → G
            ===================================================== */
 
-        ht_a_ft_h AS behind_to_win,
+        ht_m_ft_g AS behind_to_win,
 
         round(
             if(
                 ht_losses = 0,
                 0,
-                ht_a_ft_h * 100.0 / ht_losses
+                ht_m_ft_g * 100.0 / ht_losses
             ),
             2
         ) AS behind_to_win_pct
@@ -203,13 +255,15 @@ SQL >
             /* =================================================
                HT → FT
 
-               H = takım ilk yarıda önde
-               D = beraberlik
-               A = takım ilk yarıda geride
+               G = takım ilk yarıda önde
+               B = beraberlik
+               M = takım ilk yarıda geride
                ================================================= */
 
 
-            /* HT H → FT H */
+            /* =================================================
+               HT G → FT G
+               ================================================= */
 
             countIf(
 
@@ -227,10 +281,12 @@ SQL >
                     AND ft_away > ft_home
                 )
 
-            ) AS ht_h_ft_h,
+            ) AS ht_g_ft_g,
 
 
-            /* HT H → FT D */
+            /* =================================================
+               HT G → FT B
+               ================================================= */
 
             countIf(
 
@@ -248,10 +304,12 @@ SQL >
                     AND ft_home = ft_away
                 )
 
-            ) AS ht_h_ft_d,
+            ) AS ht_g_ft_b,
 
 
-            /* HT H → FT A */
+            /* =================================================
+               HT G → FT M
+               ================================================= */
 
             countIf(
 
@@ -269,11 +327,11 @@ SQL >
                     AND ft_away < ft_home
                 )
 
-            ) AS ht_h_ft_a,
+            ) AS ht_g_ft_m,
 
 
             /* =================================================
-               HT D → FT H
+               HT B → FT G
                ================================================= */
 
             countIf(
@@ -296,20 +354,24 @@ SQL >
                     )
                 )
 
-            ) AS ht_d_ft_h,
+            ) AS ht_b_ft_g,
 
 
-            /* HT D → FT D */
+            /* =================================================
+               HT B → FT B
+               ================================================= */
 
             countIf(
 
                 ht_home = ht_away
                 AND ft_home = ft_away
 
-            ) AS ht_d_ft_d,
+            ) AS ht_b_ft_b,
 
 
-            /* HT D → FT A */
+            /* =================================================
+               HT B → FT M
+               ================================================= */
 
             countIf(
 
@@ -331,11 +393,11 @@ SQL >
                     )
                 )
 
-            ) AS ht_d_ft_a,
+            ) AS ht_b_ft_m,
 
 
             /* =================================================
-               HT A → FT H
+               HT M → FT G
                ================================================= */
 
             countIf(
@@ -354,10 +416,12 @@ SQL >
                     AND ft_away > ft_home
                 )
 
-            ) AS ht_a_ft_h,
+            ) AS ht_m_ft_g,
 
 
-            /* HT A → FT D */
+            /* =================================================
+               HT M → FT B
+               ================================================= */
 
             countIf(
 
@@ -375,10 +439,12 @@ SQL >
                     AND ft_home = ft_away
                 )
 
-            ) AS ht_a_ft_d,
+            ) AS ht_m_ft_b,
 
 
-            /* HT A → FT A */
+            /* =================================================
+               HT M → FT M
+               ================================================= */
 
             countIf(
 
@@ -396,7 +462,7 @@ SQL >
                     AND ft_away < ft_home
                 )
 
-            ) AS ht_a_ft_a,
+            ) AS ht_m_ft_m,
 
 
             /* =================================================
