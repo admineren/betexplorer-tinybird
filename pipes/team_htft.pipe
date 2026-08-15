@@ -1,0 +1,488 @@
+DESCRIPTION >
+    Takım HT / FT analizi.
+
+    Takımın ilk yarı sonucunun maç sonucuna nasıl dönüştüğünü
+    takımın kendi perspektifinden hesaplar.
+
+    H = İlk yarıda takım önde
+    D = İlk yarı berabere
+    A = İlk yarıda takım geride
+
+    Aynı mantık maç sonucu için de uygulanır.
+
+    Ev sahibi ve deplasman maçları takım perspektifine çevrilir.
+
+    Opsiyonel filtreler:
+    country
+    league
+    season
+
+
+NODE team_htft_query
+SQL >
+    %
+
+    SELECT
+
+        matches,
+
+        /* =====================================================
+           9 HT / FT KOMBİNASYONU
+           ===================================================== */
+
+        ht_h_ft_h,
+        ht_h_ft_d,
+        ht_h_ft_a,
+
+        ht_d_ft_h,
+        ht_d_ft_d,
+        ht_d_ft_a,
+
+        ht_a_ft_h,
+        ht_a_ft_d,
+        ht_a_ft_a,
+
+
+        /* =====================================================
+           YÜZDELER
+           ===================================================== */
+
+        round(if(matches = 0, 0, ht_h_ft_h * 100.0 / matches), 2)
+            AS ht_h_ft_h_pct,
+
+        round(if(matches = 0, 0, ht_h_ft_d * 100.0 / matches), 2)
+            AS ht_h_ft_d_pct,
+
+        round(if(matches = 0, 0, ht_h_ft_a * 100.0 / matches), 2)
+            AS ht_h_ft_a_pct,
+
+
+        round(if(matches = 0, 0, ht_d_ft_h * 100.0 / matches), 2)
+            AS ht_d_ft_h_pct,
+
+        round(if(matches = 0, 0, ht_d_ft_d * 100.0 / matches), 2)
+            AS ht_d_ft_d_pct,
+
+        round(if(matches = 0, 0, ht_d_ft_a * 100.0 / matches), 2)
+            AS ht_d_ft_a_pct,
+
+
+        round(if(matches = 0, 0, ht_a_ft_h * 100.0 / matches), 2)
+            AS ht_a_ft_h_pct,
+
+        round(if(matches = 0, 0, ht_a_ft_d * 100.0 / matches), 2)
+            AS ht_a_ft_d_pct,
+
+        round(if(matches = 0, 0, ht_a_ft_a * 100.0 / matches), 2)
+            AS ht_a_ft_a_pct,
+
+
+        /* =====================================================
+           İLK YARI DURUMU
+           ===================================================== */
+
+        ht_wins,
+        ht_draws,
+        ht_losses,
+
+
+        round(if(matches = 0, 0, ht_wins * 100.0 / matches), 2)
+            AS ht_wins_pct,
+
+        round(if(matches = 0, 0, ht_draws * 100.0 / matches), 2)
+            AS ht_draws_pct,
+
+        round(if(matches = 0, 0, ht_losses * 100.0 / matches), 2)
+            AS ht_losses_pct,
+
+
+        /* =====================================================
+           GERİ DÖNÜŞLER
+           ===================================================== */
+
+        ht_a_ft_h AS comeback_win,
+        ht_a_ft_d AS comeback_draw,
+
+        (
+            ht_a_ft_h + ht_a_ft_d
+        ) AS comeback_total,
+
+
+        round(
+            if(
+                ht_losses = 0,
+                0,
+                ht_a_ft_h * 100.0 / ht_losses
+            ),
+            2
+        ) AS comeback_win_pct,
+
+
+        round(
+            if(
+                ht_losses = 0,
+                0,
+                ht_a_ft_d * 100.0 / ht_losses
+            ),
+            2
+        ) AS comeback_draw_pct,
+
+
+        /* =====================================================
+           ÖNDEYKEN PUAN KAYBI
+           ===================================================== */
+
+        ht_h_ft_d AS lead_lost_draw,
+        ht_h_ft_a AS lead_lost_loss,
+
+        (
+            ht_h_ft_d + ht_h_ft_a
+        ) AS lead_lost_total,
+
+
+        round(
+            if(
+                ht_wins = 0,
+                0,
+                ht_h_ft_d * 100.0 / ht_wins
+            ),
+            2
+        ) AS lead_lost_draw_pct,
+
+
+        round(
+            if(
+                ht_wins = 0,
+                0,
+                ht_h_ft_a * 100.0 / ht_wins
+            ),
+            2
+        ) AS lead_lost_loss_pct,
+
+
+        /* =====================================================
+           İLK YARIDA ÖNDEYKEN MAÇI KAZANMA
+           ===================================================== */
+
+        ht_h_ft_h AS lead_to_win,
+
+        round(
+            if(
+                ht_wins = 0,
+                0,
+                ht_h_ft_h * 100.0 / ht_wins
+            ),
+            2
+        ) AS lead_to_win_pct,
+
+
+        /* =====================================================
+           İLK YARIDA GERİDEYKEN MAÇI KAZANMA
+           ===================================================== */
+
+        ht_a_ft_h AS behind_to_win,
+
+        round(
+            if(
+                ht_losses = 0,
+                0,
+                ht_a_ft_h * 100.0 / ht_losses
+            ),
+            2
+        ) AS behind_to_win_pct
+
+
+    FROM
+    (
+
+        SELECT
+
+            count() AS matches,
+
+
+            /* =================================================
+               HT → FT
+
+               H = takım ilk yarıda önde
+               D = beraberlik
+               A = takım ilk yarıda geride
+               ================================================= */
+
+
+            /* HT H → FT H */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home > ht_away
+                    AND ft_home > ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away > ht_home
+                    AND ft_away > ft_home
+                )
+
+            ) AS ht_h_ft_h,
+
+
+            /* HT H → FT D */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home > ht_away
+                    AND ft_home = ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away > ht_home
+                    AND ft_home = ft_away
+                )
+
+            ) AS ht_h_ft_d,
+
+
+            /* HT H → FT A */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home > ht_away
+                    AND ft_home < ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away > ht_home
+                    AND ft_away < ft_home
+                )
+
+            ) AS ht_h_ft_a,
+
+
+            /* =================================================
+               HT D → FT H
+               ================================================= */
+
+            countIf(
+
+                ht_home = ht_away
+
+                AND
+
+                (
+                    (
+                        home_team = {{String(team)}}
+                        AND ft_home > ft_away
+                    )
+
+                    OR
+
+                    (
+                        away_team = {{String(team)}}
+                        AND ft_away > ft_home
+                    )
+                )
+
+            ) AS ht_d_ft_h,
+
+
+            /* HT D → FT D */
+
+            countIf(
+
+                ht_home = ht_away
+                AND ft_home = ft_away
+
+            ) AS ht_d_ft_d,
+
+
+            /* HT D → FT A */
+
+            countIf(
+
+                ht_home = ht_away
+
+                AND
+
+                (
+                    (
+                        home_team = {{String(team)}}
+                        AND ft_home < ft_away
+                    )
+
+                    OR
+
+                    (
+                        away_team = {{String(team)}}
+                        AND ft_away < ft_home
+                    )
+                )
+
+            ) AS ht_d_ft_a,
+
+
+            /* =================================================
+               HT A → FT H
+               ================================================= */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home < ht_away
+                    AND ft_home > ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away < ht_home
+                    AND ft_away > ft_home
+                )
+
+            ) AS ht_a_ft_h,
+
+
+            /* HT A → FT D */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home < ht_away
+                    AND ft_home = ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away < ht_home
+                    AND ft_home = ft_away
+                )
+
+            ) AS ht_a_ft_d,
+
+
+            /* HT A → FT A */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home < ht_away
+                    AND ft_home < ft_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away < ht_home
+                    AND ft_away < ft_home
+                )
+
+            ) AS ht_a_ft_a,
+
+
+            /* =================================================
+               İLK YARI GENEL DURUMU
+               ================================================= */
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home > ht_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away > ht_home
+                )
+
+            ) AS ht_wins,
+
+
+            countIf(
+                ht_home = ht_away
+            ) AS ht_draws,
+
+
+            countIf(
+
+                (
+                    home_team = {{String(team)}}
+                    AND ht_home < ht_away
+                )
+
+                OR
+
+                (
+                    away_team = {{String(team)}}
+                    AND ht_away < ht_home
+                )
+
+            ) AS ht_losses
+
+
+        FROM betexplorer_matches
+
+
+        WHERE
+
+            (
+                home_team = {{String(team)}}
+                OR
+                away_team = {{String(team)}}
+            )
+
+            /* Tamamlanmış maç */
+
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
+
+            /* İlk yarı skorunun da olması */
+
+            AND ht_home IS NOT NULL
+            AND ht_away IS NOT NULL
+
+
+            /* =================================================
+               OPSİYONEL FİLTRELER
+               ================================================= */
+
+            {% if defined(country) %}
+            AND country = {{String(country)}}
+            {% end %}
+
+
+            {% if defined(league) %}
+            AND league = {{String(league)}}
+            {% end %}
+
+
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
+
+    )
+
+
+TYPE ENDPOINT
