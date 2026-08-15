@@ -1,0 +1,853 @@
+DESCRIPTION >
+    Takım iç saha / deplasman karşılaştırma analizi.
+    Takımın gerçek ev sahibi ve deplasman maçlarını ayrı ayrı analiz eder.
+    Ülke, lig ve sezon filtreleri opsiyoneldir.
+
+NODE team_home_away_query
+SQL >
+    %
+
+    SELECT
+
+        /* =====================================================
+           İÇ SAHA
+           ===================================================== */
+
+        home_matches,
+        home_wins,
+        home_draws,
+        home_losses,
+
+        round(
+            if(home_matches = 0, 0, home_wins * 100.0 / home_matches),
+            2
+        ) AS home_win_pct,
+
+        home_goals_for,
+        home_goals_against,
+
+        home_goals_for - home_goals_against
+            AS home_goal_difference,
+
+        round(
+            if(home_matches = 0, 0, home_goals_for * 1.0 / home_matches),
+            2
+        ) AS home_goals_for_avg,
+
+        round(
+            if(home_matches = 0, 0, home_goals_against * 1.0 / home_matches),
+            2
+        ) AS home_goals_against_avg,
+
+        round(
+            if(
+                home_matches = 0,
+                0,
+                (home_goals_for + home_goals_against) * 1.0 / home_matches
+            ),
+            2
+        ) AS home_total_goals_avg,
+
+
+        /* =====================================================
+           DEPLASMAN
+           ===================================================== */
+
+        away_matches,
+        away_wins,
+        away_draws,
+        away_losses,
+
+        round(
+            if(away_matches = 0, 0, away_wins * 100.0 / away_matches),
+            2
+        ) AS away_win_pct,
+
+        away_goals_for,
+        away_goals_against,
+
+        away_goals_for - away_goals_against
+            AS away_goal_difference,
+
+        round(
+            if(away_matches = 0, 0, away_goals_for * 1.0 / away_matches),
+            2
+        ) AS away_goals_for_avg,
+
+        round(
+            if(away_matches = 0, 0, away_goals_against * 1.0 / away_matches),
+            2
+        ) AS away_goals_against_avg,
+
+        round(
+            if(
+                away_matches = 0,
+                0,
+                (away_goals_for + away_goals_against) * 1.0 / away_matches
+            ),
+            2
+        ) AS away_total_goals_avg,
+
+
+        /* =====================================================
+           İÇ SAHA OVER
+           ===================================================== */
+
+        home_over_1_5,
+        home_over_2_5,
+        home_over_3_5,
+        home_over_4_5,
+
+        round(
+            if(home_matches = 0, 0, home_over_1_5 * 100.0 / home_matches),
+            2
+        ) AS home_over_1_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_over_2_5 * 100.0 / home_matches),
+            2
+        ) AS home_over_2_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_over_3_5 * 100.0 / home_matches),
+            2
+        ) AS home_over_3_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_over_4_5 * 100.0 / home_matches),
+            2
+        ) AS home_over_4_5_pct,
+
+
+        /* =====================================================
+           DEPLASMAN OVER
+           ===================================================== */
+
+        away_over_1_5,
+        away_over_2_5,
+        away_over_3_5,
+        away_over_4_5,
+
+        round(
+            if(away_matches = 0, 0, away_over_1_5 * 100.0 / away_matches),
+            2
+        ) AS away_over_1_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_over_2_5 * 100.0 / away_matches),
+            2
+        ) AS away_over_2_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_over_3_5 * 100.0 / away_matches),
+            2
+        ) AS away_over_3_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_over_4_5 * 100.0 / away_matches),
+            2
+        ) AS away_over_4_5_pct,
+
+
+        /* =====================================================
+           BTTS
+           ===================================================== */
+
+        home_btts_yes,
+        home_btts_no,
+
+        round(
+            if(home_matches = 0, 0, home_btts_yes * 100.0 / home_matches),
+            2
+        ) AS home_btts_yes_pct,
+
+        round(
+            if(home_matches = 0, 0, home_btts_no * 100.0 / home_matches),
+            2
+        ) AS home_btts_no_pct,
+
+        away_btts_yes,
+        away_btts_no,
+
+        round(
+            if(away_matches = 0, 0, away_btts_yes * 100.0 / away_matches),
+            2
+        ) AS away_btts_yes_pct,
+
+        round(
+            if(away_matches = 0, 0, away_btts_no * 100.0 / away_matches),
+            2
+        ) AS away_btts_no_pct,
+
+
+        /* =====================================================
+           İÇ SAHA - İLK YARI
+           ===================================================== */
+
+        home_ht_goals_for,
+        home_ht_goals_against,
+
+        home_ht_goals_for - home_ht_goals_against
+            AS home_ht_goal_difference,
+
+        round(
+            if(home_matches = 0, 0, home_ht_goals_for * 1.0 / home_matches),
+            2
+        ) AS home_ht_goals_for_avg,
+
+        round(
+            if(home_matches = 0, 0, home_ht_goals_against * 1.0 / home_matches),
+            2
+        ) AS home_ht_goals_against_avg,
+
+        home_ht_over_0_5,
+        home_ht_over_1_5,
+        home_ht_over_2_5,
+
+        round(
+            if(home_matches = 0, 0, home_ht_over_0_5 * 100.0 / home_matches),
+            2
+        ) AS home_ht_over_0_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_ht_over_1_5 * 100.0 / home_matches),
+            2
+        ) AS home_ht_over_1_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_ht_over_2_5 * 100.0 / home_matches),
+            2
+        ) AS home_ht_over_2_5_pct,
+
+
+        /* =====================================================
+           DEPLASMAN - İLK YARI
+           ===================================================== */
+
+        away_ht_goals_for,
+        away_ht_goals_against,
+
+        away_ht_goals_for - away_ht_goals_against
+            AS away_ht_goal_difference,
+
+        round(
+            if(away_matches = 0, 0, away_ht_goals_for * 1.0 / away_matches),
+            2
+        ) AS away_ht_goals_for_avg,
+
+        round(
+            if(away_matches = 0, 0, away_ht_goals_against * 1.0 / away_matches),
+            2
+        ) AS away_ht_goals_against_avg,
+
+        away_ht_over_0_5,
+        away_ht_over_1_5,
+        away_ht_over_2_5,
+
+        round(
+            if(away_matches = 0, 0, away_ht_over_0_5 * 100.0 / away_matches),
+            2
+        ) AS away_ht_over_0_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_ht_over_1_5 * 100.0 / away_matches),
+            2
+        ) AS away_ht_over_1_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_ht_over_2_5 * 100.0 / away_matches),
+            2
+        ) AS away_ht_over_2_5_pct,
+
+
+        /* =====================================================
+           İÇ SAHA - İKİNCİ YARI
+           ===================================================== */
+
+        home_2h_goals_for,
+        home_2h_goals_against,
+
+        home_2h_goals_for - home_2h_goals_against
+            AS home_2h_goal_difference,
+
+        round(
+            if(home_matches = 0, 0, home_2h_goals_for * 1.0 / home_matches),
+            2
+        ) AS home_2h_goals_for_avg,
+
+        round(
+            if(home_matches = 0, 0, home_2h_goals_against * 1.0 / home_matches),
+            2
+        ) AS home_2h_goals_against_avg,
+
+        home_2h_over_0_5,
+        home_2h_over_1_5,
+        home_2h_over_2_5,
+
+        round(
+            if(home_matches = 0, 0, home_2h_over_0_5 * 100.0 / home_matches),
+            2
+        ) AS home_2h_over_0_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_2h_over_1_5 * 100.0 / home_matches),
+            2
+        ) AS home_2h_over_1_5_pct,
+
+        round(
+            if(home_matches = 0, 0, home_2h_over_2_5 * 100.0 / home_matches),
+            2
+        ) AS home_2h_over_2_5_pct,
+
+
+        /* =====================================================
+           DEPLASMAN - İKİNCİ YARI
+           ===================================================== */
+
+        away_2h_goals_for,
+        away_2h_goals_against,
+
+        away_2h_goals_for - away_2h_goals_against
+            AS away_2h_goal_difference,
+
+        round(
+            if(away_matches = 0, 0, away_2h_goals_for * 1.0 / away_matches),
+            2
+        ) AS away_2h_goals_for_avg,
+
+        round(
+            if(away_matches = 0, 0, away_2h_goals_against * 1.0 / away_matches),
+            2
+        ) AS away_2h_goals_against_avg,
+
+        away_2h_over_0_5,
+        away_2h_over_1_5,
+        away_2h_over_2_5,
+
+        round(
+            if(away_matches = 0, 0, away_2h_over_0_5 * 100.0 / away_matches),
+            2
+        ) AS away_2h_over_0_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_2h_over_1_5 * 100.0 / away_matches),
+            2
+        ) AS away_2h_over_1_5_pct,
+
+        round(
+            if(away_matches = 0, 0, away_2h_over_2_5 * 100.0 / away_matches),
+            2
+        ) AS away_2h_over_2_5_pct,
+
+
+        /* =====================================================
+           İÇ SAHA - ATILAN GOL DAĞILIMI
+           ===================================================== */
+
+        home_scored_0,
+        home_scored_1,
+        home_scored_2_3,
+        home_scored_4_5,
+        home_scored_6_plus,
+
+
+        /* =====================================================
+           DEPLASMAN - ATILAN GOL DAĞILIMI
+           ===================================================== */
+
+        away_scored_0,
+        away_scored_1,
+        away_scored_2_3,
+        away_scored_4_5,
+        away_scored_6_plus,
+
+
+        /* =====================================================
+           İÇ SAHA - YENİLEN GOL DAĞILIMI
+           ===================================================== */
+
+        home_conceded_0,
+        home_conceded_1,
+        home_conceded_2_3,
+        home_conceded_4_5,
+        home_conceded_6_plus,
+
+
+        /* =====================================================
+           DEPLASMAN - YENİLEN GOL DAĞILIMI
+           ===================================================== */
+
+        away_conceded_0,
+        away_conceded_1,
+        away_conceded_2_3,
+        away_conceded_4_5,
+        away_conceded_6_plus
+
+
+    FROM
+    (
+        SELECT
+
+            /* =================================================
+               MAÇ SAYILARI
+               ================================================= */
+
+            countIf(venue = 'home') AS home_matches,
+            countIf(venue = 'away') AS away_matches,
+
+
+            /* =================================================
+               GALİBİYET / BERABERLİK / MAĞLUBİYET
+               ================================================= */
+
+            countIf(
+                venue = 'home'
+                AND team_goals > opponent_goals
+            ) AS home_wins,
+
+            countIf(
+                venue = 'home'
+                AND team_goals = opponent_goals
+            ) AS home_draws,
+
+            countIf(
+                venue = 'home'
+                AND team_goals < opponent_goals
+            ) AS home_losses,
+
+
+            countIf(
+                venue = 'away'
+                AND team_goals > opponent_goals
+            ) AS away_wins,
+
+            countIf(
+                venue = 'away'
+                AND team_goals = opponent_goals
+            ) AS away_draws,
+
+            countIf(
+                venue = 'away'
+                AND team_goals < opponent_goals
+            ) AS away_losses,
+
+
+            /* =================================================
+               GOL PERFORMANSI
+               ================================================= */
+
+            sumIf(team_goals, venue = 'home')
+                AS home_goals_for,
+
+            sumIf(opponent_goals, venue = 'home')
+                AS home_goals_against,
+
+            sumIf(team_goals, venue = 'away')
+                AS away_goals_for,
+
+            sumIf(opponent_goals, venue = 'away')
+                AS away_goals_against,
+
+
+            /* =================================================
+               OVER
+               ================================================= */
+
+            countIf(
+                venue = 'home'
+                AND total_goals >= 2
+            ) AS home_over_1_5,
+
+            countIf(
+                venue = 'home'
+                AND total_goals >= 3
+            ) AS home_over_2_5,
+
+            countIf(
+                venue = 'home'
+                AND total_goals >= 4
+            ) AS home_over_3_5,
+
+            countIf(
+                venue = 'home'
+                AND total_goals >= 5
+            ) AS home_over_4_5,
+
+
+            countIf(
+                venue = 'away'
+                AND total_goals >= 2
+            ) AS away_over_1_5,
+
+            countIf(
+                venue = 'away'
+                AND total_goals >= 3
+            ) AS away_over_2_5,
+
+            countIf(
+                venue = 'away'
+                AND total_goals >= 4
+            ) AS away_over_3_5,
+
+            countIf(
+                venue = 'away'
+                AND total_goals >= 5
+            ) AS away_over_4_5,
+
+
+            /* =================================================
+               BTTS
+               ================================================= */
+
+            countIf(
+                venue = 'home'
+                AND team_goals > 0
+                AND opponent_goals > 0
+            ) AS home_btts_yes,
+
+            countIf(
+                venue = 'home'
+                AND (team_goals = 0 OR opponent_goals = 0)
+            ) AS home_btts_no,
+
+
+            countIf(
+                venue = 'away'
+                AND team_goals > 0
+                AND opponent_goals > 0
+            ) AS away_btts_yes,
+
+            countIf(
+                venue = 'away'
+                AND (team_goals = 0 OR opponent_goals = 0)
+            ) AS away_btts_no,
+
+
+            /* =================================================
+               İLK YARI GOLLERİ
+               ================================================= */
+
+            sumIf(ht_team_goals, venue = 'home')
+                AS home_ht_goals_for,
+
+            sumIf(ht_opponent_goals, venue = 'home')
+                AS home_ht_goals_against,
+
+            sumIf(ht_team_goals, venue = 'away')
+                AS away_ht_goals_for,
+
+            sumIf(ht_opponent_goals, venue = 'away')
+                AS away_ht_goals_against,
+
+
+            countIf(
+                venue = 'home'
+                AND ht_total_goals >= 1
+            ) AS home_ht_over_0_5,
+
+            countIf(
+                venue = 'home'
+                AND ht_total_goals >= 2
+            ) AS home_ht_over_1_5,
+
+            countIf(
+                venue = 'home'
+                AND ht_total_goals >= 3
+            ) AS home_ht_over_2_5,
+
+
+            countIf(
+                venue = 'away'
+                AND ht_total_goals >= 1
+            ) AS away_ht_over_0_5,
+
+            countIf(
+                venue = 'away'
+                AND ht_total_goals >= 2
+            ) AS away_ht_over_1_5,
+
+            countIf(
+                venue = 'away'
+                AND ht_total_goals >= 3
+            ) AS away_ht_over_2_5,
+
+
+            /* =================================================
+               İKİNCİ YARI
+               ================================================= */
+
+            sumIf(second_half_team_goals, venue = 'home')
+                AS home_2h_goals_for,
+
+            sumIf(second_half_opponent_goals, venue = 'home')
+                AS home_2h_goals_against,
+
+            sumIf(second_half_team_goals, venue = 'away')
+                AS away_2h_goals_for,
+
+            sumIf(second_half_opponent_goals, venue = 'away')
+                AS away_2h_goals_against,
+
+
+            countIf(
+                venue = 'home'
+                AND second_half_total_goals >= 1
+            ) AS home_2h_over_0_5,
+
+            countIf(
+                venue = 'home'
+                AND second_half_total_goals >= 2
+            ) AS home_2h_over_1_5,
+
+            countIf(
+                venue = 'home'
+                AND second_half_total_goals >= 3
+            ) AS home_2h_over_2_5,
+
+
+            countIf(
+                venue = 'away'
+                AND second_half_total_goals >= 1
+            ) AS away_2h_over_0_5,
+
+            countIf(
+                venue = 'away'
+                AND second_half_total_goals >= 2
+            ) AS away_2h_over_1_5,
+
+            countIf(
+                venue = 'away'
+                AND second_half_total_goals >= 3
+            ) AS away_2h_over_2_5,
+
+
+            /* =================================================
+               ATILAN GOL DAĞILIMI
+               ================================================= */
+
+            countIf(
+                venue = 'home'
+                AND team_goals = 0
+            ) AS home_scored_0,
+
+            countIf(
+                venue = 'home'
+                AND team_goals = 1
+            ) AS home_scored_1,
+
+            countIf(
+                venue = 'home'
+                AND team_goals BETWEEN 2 AND 3
+            ) AS home_scored_2_3,
+
+            countIf(
+                venue = 'home'
+                AND team_goals BETWEEN 4 AND 5
+            ) AS home_scored_4_5,
+
+            countIf(
+                venue = 'home'
+                AND team_goals >= 6
+            ) AS home_scored_6_plus,
+
+
+            countIf(
+                venue = 'away'
+                AND team_goals = 0
+            ) AS away_scored_0,
+
+            countIf(
+                venue = 'away'
+                AND team_goals = 1
+            ) AS away_scored_1,
+
+            countIf(
+                venue = 'away'
+                AND team_goals BETWEEN 2 AND 3
+            ) AS away_scored_2_3,
+
+            countIf(
+                venue = 'away'
+                AND team_goals BETWEEN 4 AND 5
+            ) AS away_scored_4_5,
+
+            countIf(
+                venue = 'away'
+                AND team_goals >= 6
+            ) AS away_scored_6_plus,
+
+
+            /* =================================================
+               YENİLEN GOL DAĞILIMI
+               ================================================= */
+
+            countIf(
+                venue = 'home'
+                AND opponent_goals = 0
+            ) AS home_conceded_0,
+
+            countIf(
+                venue = 'home'
+                AND opponent_goals = 1
+            ) AS home_conceded_1,
+
+            countIf(
+                venue = 'home'
+                AND opponent_goals BETWEEN 2 AND 3
+            ) AS home_conceded_2_3,
+
+            countIf(
+                venue = 'home'
+                AND opponent_goals BETWEEN 4 AND 5
+            ) AS home_conceded_4_5,
+
+            countIf(
+                venue = 'home'
+                AND opponent_goals >= 6
+            ) AS home_conceded_6_plus,
+
+
+            countIf(
+                venue = 'away'
+                AND opponent_goals = 0
+            ) AS away_conceded_0,
+
+            countIf(
+                venue = 'away'
+                AND opponent_goals = 1
+            ) AS away_conceded_1,
+
+            countIf(
+                venue = 'away'
+                AND opponent_goals BETWEEN 2 AND 3
+            ) AS away_conceded_2_3,
+
+            countIf(
+                venue = 'away'
+                AND opponent_goals BETWEEN 4 AND 5
+            ) AS away_conceded_4_5,
+
+            countIf(
+                venue = 'away'
+                AND opponent_goals >= 6
+            ) AS away_conceded_6_plus
+
+
+        FROM
+        (
+            SELECT
+
+                /* =============================================
+                   GERÇEK MAÇ KONUMU
+                   ============================================= */
+
+                if(
+                    home_team = {{String(team)}},
+                    'home',
+                    'away'
+                ) AS venue,
+
+
+                /* =============================================
+                   TAKIM GOLLERİ
+                   ============================================= */
+
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                ) AS team_goals,
+
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                ) AS opponent_goals,
+
+
+                /* =============================================
+                   İLK YARI
+                   ============================================= */
+
+                if(
+                    home_team = {{String(team)}},
+                    ht_home,
+                    ht_away
+                ) AS ht_team_goals,
+
+                if(
+                    home_team = {{String(team)}},
+                    ht_away,
+                    ht_home
+                ) AS ht_opponent_goals,
+
+
+                /* =============================================
+                   İKİNCİ YARI
+                   ============================================= */
+
+                if(
+                    home_team = {{String(team)}},
+                    ft_home - ht_home,
+                    ft_away - ht_away
+                ) AS second_half_team_goals,
+
+                if(
+                    home_team = {{String(team)}},
+                    ft_away - ht_away,
+                    ft_home - ht_home
+                ) AS second_half_opponent_goals,
+
+
+                /* =============================================
+                   TOPLAM GOLLER
+                   ============================================= */
+
+                ft_home + ft_away
+                    AS total_goals,
+
+                ht_home + ht_away
+                    AS ht_total_goals,
+
+                (
+                    (ft_home - ht_home)
+                    +
+                    (ft_away - ht_away)
+                ) AS second_half_total_goals
+
+
+            FROM betexplorer_matches
+
+            WHERE
+                (
+                    home_team = {{String(team)}}
+                    OR
+                    away_team = {{String(team)}}
+                )
+
+                AND ft_home IS NOT NULL
+                AND ft_away IS NOT NULL
+                AND ht_home IS NOT NULL
+                AND ht_away IS NOT NULL
+
+
+                /* =============================================
+                   OPSİYONEL FİLTRELER
+                   ============================================= */
+
+                {% if defined(country) %}
+                AND country = {{String(country)}}
+                {% end %}
+
+                {% if defined(league) %}
+                AND league = {{String(league)}}
+                {% end %}
+
+                {% if defined(season) %}
+                AND season = {{String(season)}}
+                {% end %}
+        )
+    )
+
+
+TYPE ENDPOINT
