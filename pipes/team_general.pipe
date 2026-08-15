@@ -1,127 +1,196 @@
 DESCRIPTION >
-    Takım genel performans özeti.
-    Maç, sonuç, gol, ilk yarı ve ikinci yarı istatistiklerini döndürür.
+    Takım genel performans analizi.
+    Maç, gol, ilk yarı ve ikinci yarı istatistiklerini döndürür.
+    Ülke, lig ve sezon filtreleri opsiyoneldir.
 
 NODE team_general_query
 SQL >
-%
+    %
+
     SELECT
+        matches,
 
-        /* =====================================================
-           MAÇ PERFORMANSI
-           ===================================================== */
+        wins,
+        draws,
+        losses,
 
-        count() AS matches,
+        round(
+            if(matches = 0, 0, wins * 100.0 / matches),
+            2
+        ) AS win_pct,
 
-        countIf(
+        round(
+            if(matches = 0, 0, draws * 100.0 / matches),
+            2
+        ) AS draw_pct,
+
+        round(
+            if(matches = 0, 0, losses * 100.0 / matches),
+            2
+        ) AS loss_pct,
+
+        goals_for,
+        goals_against,
+
+        goals_for - goals_against AS goal_difference,
+
+        round(
+            if(matches = 0, 0, goals_for * 1.0 / matches),
+            2
+        ) AS goals_for_avg,
+
+        round(
+            if(matches = 0, 0, goals_against * 1.0 / matches),
+            2
+        ) AS goals_against_avg,
+
+        round(
+            if(matches = 0, 0, (goals_for + goals_against) * 1.0 / matches),
+            2
+        ) AS total_goals_avg,
+
+        ht_goals_for,
+        ht_goals_against,
+
+        ht_goals_for - ht_goals_against AS ht_goal_difference,
+
+        second_half_goals_for,
+        second_half_goals_against,
+
+        second_half_goals_for - second_half_goals_against
+            AS second_half_goal_difference
+
+    FROM
+    (
+        SELECT
+
+            /* =====================================================
+               MAÇ PERFORMANSI
+               ===================================================== */
+
+            count() AS matches,
+
+            countIf(
+                (
+                    home_team = {{String(team)}}
+                    AND ft_home > ft_away
+                )
+                OR
+                (
+                    away_team = {{String(team)}}
+                    AND ft_away > ft_home
+                )
+            ) AS wins,
+
+            countIf(
+                ft_home = ft_away
+            ) AS draws,
+
+            countIf(
+                (
+                    home_team = {{String(team)}}
+                    AND ft_home < ft_away
+                )
+                OR
+                (
+                    away_team = {{String(team)}}
+                    AND ft_away < ft_home
+                )
+            ) AS losses,
+
+
+            /* =====================================================
+               GOL PERFORMANSI
+               ===================================================== */
+
+            sum(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home,
+                    ft_away
+                )
+            ) AS goals_for,
+
+            sum(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away,
+                    ft_home
+                )
+            ) AS goals_against,
+
+
+            /* =====================================================
+               İLK YARI
+               ===================================================== */
+
+            sum(
+                if(
+                    home_team = {{String(team)}},
+                    ht_home,
+                    ht_away
+                )
+            ) AS ht_goals_for,
+
+            sum(
+                if(
+                    home_team = {{String(team)}},
+                    ht_away,
+                    ht_home
+                )
+            ) AS ht_goals_against,
+
+
+            /* =====================================================
+               İKİNCİ YARI
+               ===================================================== */
+
+            sum(
+                if(
+                    home_team = {{String(team)}},
+                    ft_home - ht_home,
+                    ft_away - ht_away
+                )
+            ) AS second_half_goals_for,
+
+            sum(
+                if(
+                    home_team = {{String(team)}},
+                    ft_away - ht_away,
+                    ft_home - ht_home
+                )
+            ) AS second_half_goals_against
+
+
+        FROM betexplorer_matches
+
+        WHERE
             (
                 home_team = {{String(team)}}
-                AND ft_home > ft_away
-            )
-            OR
-            (
+                OR
                 away_team = {{String(team)}}
-                AND ft_away > ft_home
             )
-        ) AS wins,
 
-        countIf(ft_home = ft_away) AS draws,
+            /* Sadece tamamlanmış maçlar */
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
 
-        countIf(
-            (
-                home_team = {{String(team)}}
-                AND ft_home < ft_away
-            )
-            OR
-            (
-                away_team = {{String(team)}}
-                AND ft_away < ft_home
-            )
-        ) AS losses,
+            /* =====================================================
+               OPSİYONEL FİLTRELER
+               ===================================================== */
 
+            {% if defined(country) %}
+            AND country = {{String(country)}}
+            {% end %}
 
-        /* =====================================================
-           GOL PERFORMANSI
-           ===================================================== */
+            {% if defined(league) %}
+            AND league = {{String(league)}}
+            {% end %}
 
-        sum(
-            if(
-                home_team = {{String(team)}},
-                ft_home,
-                ft_away
-            )
-        ) AS goals_for,
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
+    )
 
-        sum(
-            if(
-                home_team = {{String(team)}},
-                ft_away,
-                ft_home
-            )
-        ) AS goals_against,
-
-
-        /* =====================================================
-           İLK YARI
-           ===================================================== */
-
-        sum(
-            if(
-                home_team = {{String(team)}},
-                ht_home,
-                ht_away
-            )
-        ) AS ht_goals_for,
-
-        sum(
-            if(
-                home_team = {{String(team)}},
-                ht_away,
-                ht_home
-            )
-        ) AS ht_goals_against,
-
-
-        /* =====================================================
-           İKİNCİ YARI
-           ===================================================== */
-
-        sum(
-            if(
-                home_team = {{String(team)}},
-                ft_home - ht_home,
-                ft_away - ht_away
-            )
-        ) AS second_half_goals_for,
-
-        sum(
-            if(
-                home_team = {{String(team)}},
-                ft_away - ht_away,
-                ft_home - ht_home
-            )
-        ) AS second_half_goals_against
-
-
-    FROM betexplorer_matches
-
-    WHERE
-        (
-            home_team = {{String(team)}}
-            OR
-            away_team = {{String(team)}}
-        )
-
-        {% if defined(country) %}
-        AND country = {{String(country)}}
-        {% end %}
-
-        {% if defined(league) %}
-        AND league = {{String(league)}}
-        {% end %}
-
-        {% if defined(season) %}
-        AND season = {{String(season)}}
-        {% end %}
 
 TYPE ENDPOINT
