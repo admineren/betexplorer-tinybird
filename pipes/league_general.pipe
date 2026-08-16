@@ -1,46 +1,16 @@
 DESCRIPTION >
-    Lig genel analiz özeti.
+    Lig genel istatistikleri.
 
-    Zorunlu parametreler:
-    - country
-    - league
-
-    Opsiyonel:
-    - season
-
-    Genel:
-    - Toplam maç
-    - Takım sayısı
-    - Ev sahibi galibiyet
-    - Beraberlik
-    - Deplasman galibiyeti
-    - Toplam gol
-    - Maç başına gol
-    - Ev sahibi gol ortalaması
-    - Deplasman gol ortalaması
-    - Over 1.5
-    - Over 2.5
-    - BTTS
-
-    İlk yarı:
-    - Ev sahibi önde
-    - Beraberlik
-    - Deplasman önde
-
-    İkinci yarı:
-    - Ev sahibi üstün
-    - Eşit
-    - Deplasman üstün
+    Country ve league zorunludur.
+    Season opsiyoneldir.
 
     Parametreler:
-    country
-    league
-    season
-
+    - country
+    - league
+    - season (opsiyonel)
 
 NODE league_general_query
 SQL >
-
     %
 
     SELECT
@@ -53,6 +23,12 @@ SQL >
 
         {{String(league)}} AS league,
 
+        {% if defined(season) %}
+        {{String(season)}} AS season,
+        {% else %}
+        'ALL' AS season,
+        {% end %}
+
 
         /* =====================================================
            GENEL MAÇ
@@ -61,7 +37,12 @@ SQL >
         count() AS matches,
 
 
-        uniqExact(home_team) AS home_team_count,
+        /* =====================================================
+           TAKIM SAYISI
+           ===================================================== */
+
+        uniqExact(home_team) AS home_teams,
+        uniqExact(away_team) AS away_teams,
 
 
         /* =====================================================
@@ -83,29 +64,27 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                home_wins * 100.0 / matches
+                home_wins * 100.0 / count()
             ),
             2
         ) AS home_win_pct,
 
-
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                draws * 100.0 / matches
+                draws * 100.0 / count()
             ),
             2
         ) AS draw_pct,
 
-
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                away_wins * 100.0 / matches
+                away_wins * 100.0 / count()
             ),
             2
         ) AS away_win_pct,
@@ -124,9 +103,9 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                sum(ft_home + ft_away) * 1.0 / matches
+                sum(ft_home + ft_away) * 1.0 / count()
             ),
             2
         ) AS goals_per_match,
@@ -134,9 +113,9 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                sum(ft_home) * 1.0 / matches
+                sum(ft_home) * 1.0 / count()
             ),
             2
         ) AS home_goals_avg,
@@ -144,16 +123,16 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                sum(ft_away) * 1.0 / matches
+                sum(ft_away) * 1.0 / count()
             ),
             2
         ) AS away_goals_avg,
 
 
         /* =====================================================
-           OVER 1.5 / 2.5
+           OVER
            ===================================================== */
 
         countIf(
@@ -163,9 +142,9 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                over_1_5 * 100.0 / matches
+                over_1_5 * 100.0 / count()
             ),
             2
         ) AS over_1_5_pct,
@@ -178,9 +157,9 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                over_2_5 * 100.0 / matches
+                over_2_5 * 100.0 / count()
             ),
             2
         ) AS over_2_5_pct,
@@ -206,9 +185,9 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                btts_yes * 100.0 / matches
+                btts_yes * 100.0 / count()
             ),
             2
         ) AS btts_yes_pct,
@@ -216,9 +195,9 @@ SQL >
 
         round(
             if(
-                matches = 0,
+                count() = 0,
                 0,
-                btts_no * 100.0 / matches
+                btts_no * 100.0 / count()
             ),
             2
         ) AS btts_no_pct,
@@ -308,7 +287,13 @@ SQL >
             AND
             ht_away IS NOT NULL
             AND
-            (ft_home - ht_home) > (ft_away - ht_away)
+            (
+                ft_home - ht_home
+            )
+            >
+            (
+                ft_away - ht_away
+            )
         ) AS second_half_home_wins,
 
 
@@ -317,7 +302,13 @@ SQL >
             AND
             ht_away IS NOT NULL
             AND
-            (ft_home - ht_home) = (ft_away - ht_away)
+            (
+                ft_home - ht_home
+            )
+            =
+            (
+                ft_away - ht_away
+            )
         ) AS second_half_draws,
 
 
@@ -326,7 +317,13 @@ SQL >
             AND
             ht_away IS NOT NULL
             AND
-            (ft_home - ht_home) < (ft_away - ht_away)
+            (
+                ft_home - ht_home
+            )
+            <
+            (
+                ft_away - ht_away
+            )
         ) AS second_half_away_wins,
 
 
@@ -367,7 +364,7 @@ SQL >
 
 
     /* =========================================================
-       LİG FİLTRESİ
+       FİLTRELER
        ========================================================= */
 
     WHERE
@@ -379,19 +376,17 @@ SQL >
         league = {{String(league)}}
 
 
-        /* =====================================================
-           SEASON OPSİYONEL
-           ===================================================== */
-
         {% if defined(season) %}
 
-        AND season = {{String(season)}}
+        AND
+
+        season = {{String(season)}}
 
         {% end %}
 
 
         /* =====================================================
-           SADECE TAMAMLANMIŞ MAÇLAR
+           SADECE OYNANMIŞ MAÇLAR
            ===================================================== */
 
         AND ft_home IS NOT NULL
