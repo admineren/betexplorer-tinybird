@@ -1,0 +1,77 @@
+DESCRIPTION >
+    Lig maçları.
+
+    Belirli bir ülke ve lig için maçları listeler.
+    Sezon ve takım filtreleri opsiyoneldir.
+
+    Parametreler:
+    country  : Ülke
+    league   : Lig
+    season   : Sezon (opsiyonel)
+    team     : Takım (opsiyonel)
+    limit    : Maksimum maç sayısı (varsayılan 20)
+
+NODE league_matches_query
+SQL >
+    %
+
+    SELECT
+
+        match_id,
+        date,
+        time,
+
+        home_team,
+        away_team,
+
+        ht_home,
+        ht_away,
+
+        ft_home,
+        ft_away,
+
+        result,
+
+        ht_total_goals,
+        ft_total_goals,
+
+        goal_diff,
+
+        ht_ft,
+
+        has_odds
+
+    FROM betexplorer_matches
+
+    WHERE
+
+        country = {{String(country)}}
+
+        AND league = {{String(league)}}
+
+        AND ft_home IS NOT NULL
+        AND ft_away IS NOT NULL
+
+
+        {% if defined(season) %}
+        AND season = {{String(season)}}
+        {% end %}
+
+
+        {% if defined(team) %}
+        AND
+        (
+            home_team = {{String(team)}}
+            OR
+            away_team = {{String(team)}}
+        )
+        {% end %}
+
+
+    ORDER BY
+        date DESC,
+        time DESC
+
+    LIMIT {{Int32(limit, 20)}}
+
+TYPE ENDPOINT
