@@ -1,0 +1,491 @@
+DESCRIPTION >
+    Bir lig ve sezonun genel yapısını özetler.
+
+    Genel:
+    - Toplam maç
+    - Takım sayısı
+    - Ev sahibi galibiyetleri
+    - Beraberlikler
+    - Deplasman galibiyetleri
+    - Sonuç yüzdeleri
+
+    Goller:
+    - Toplam gol
+    - Ev sahibi golleri
+    - Deplasman golleri
+    - Maç başına toplam gol
+    - Ev sahibi gol ortalaması
+    - Deplasman gol ortalaması
+
+    Gol eğilimleri:
+    - Over 1.5
+    - Over 2.5
+    - BTTS Var
+    - BTTS Yok
+
+    İlk yarı:
+    - Ev sahibi önde
+    - Beraberlik
+    - Deplasman önde
+
+    İkinci yarı:
+    - Ev sahibi üstün
+    - Eşit
+    - Deplasman üstün
+
+    Parametreler:
+    - country
+    - league
+    - season
+
+
+NODE league_general_query
+SQL >
+
+    %
+
+    SELECT
+
+        /* =====================================================
+           LİG BİLGİSİ
+           ===================================================== */
+
+        country,
+        league,
+        season,
+
+        matches,
+
+        length(
+            arrayDistinct(
+                arrayConcat(
+                    home_teams,
+                    away_teams
+                )
+            )
+        ) AS teams,
+
+
+        /* =====================================================
+           MAÇ SONUÇLARI
+           ===================================================== */
+
+        home_wins,
+        draws,
+        away_wins,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                home_wins * 100.0 / matches
+            ),
+            2
+        ) AS home_win_pct,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                draws * 100.0 / matches
+            ),
+            2
+        ) AS draw_pct,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                away_wins * 100.0 / matches
+            ),
+            2
+        ) AS away_win_pct,
+
+
+        /* =====================================================
+           GOLLER
+           ===================================================== */
+
+        home_goals,
+        away_goals,
+
+        total_goals,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                total_goals * 1.0 / matches
+            ),
+            2
+        ) AS goals_per_match,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                home_goals * 1.0 / matches
+            ),
+            2
+        ) AS home_goals_avg,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                away_goals * 1.0 / matches
+            ),
+            2
+        ) AS away_goals_avg,
+
+
+        /* =====================================================
+           OVER / UNDER
+           ===================================================== */
+
+        over_1_5,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                over_1_5 * 100.0 / matches
+            ),
+            2
+        ) AS over_1_5_pct,
+
+
+        over_2_5,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                over_2_5 * 100.0 / matches
+            ),
+            2
+        ) AS over_2_5_pct,
+
+
+        /* =====================================================
+           BTTS
+           ===================================================== */
+
+        btts_yes,
+        btts_no,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                btts_yes * 100.0 / matches
+            ),
+            2
+        ) AS btts_yes_pct,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                btts_no * 100.0 / matches
+            ),
+            2
+        ) AS btts_no_pct,
+
+
+        /* =====================================================
+           İLK YARI
+           ===================================================== */
+
+        ht_matches,
+
+        ht_home_wins,
+        ht_draws,
+        ht_away_wins,
+
+        round(
+            if(
+                ht_matches = 0,
+                0,
+                ht_home_wins * 100.0 / ht_matches
+            ),
+            2
+        ) AS ht_home_win_pct,
+
+        round(
+            if(
+                ht_matches = 0,
+                0,
+                ht_draws * 100.0 / ht_matches
+            ),
+            2
+        ) AS ht_draw_pct,
+
+        round(
+            if(
+                ht_matches = 0,
+                0,
+                ht_away_wins * 100.0 / ht_matches
+            ),
+            2
+        ) AS ht_away_win_pct,
+
+
+        /* =====================================================
+           İKİNCİ YARI
+           ===================================================== */
+
+        second_half_matches,
+
+        second_half_home_wins,
+        second_half_draws,
+        second_half_away_wins,
+
+        round(
+            if(
+                second_half_matches = 0,
+                0,
+                second_half_home_wins * 100.0
+                / second_half_matches
+            ),
+            2
+        ) AS second_half_home_win_pct,
+
+        round(
+            if(
+                second_half_matches = 0,
+                0,
+                second_half_draws * 100.0
+                / second_half_matches
+            ),
+            2
+        ) AS second_half_draw_pct,
+
+        round(
+            if(
+                second_half_matches = 0,
+                0,
+                second_half_away_wins * 100.0
+                / second_half_matches
+            ),
+            2
+        ) AS second_half_away_win_pct
+
+
+    FROM
+    (
+
+        SELECT
+
+            any(country) AS country,
+            any(league) AS league,
+            any(season) AS season,
+
+
+            /* =================================================
+               MAÇ SAYISI
+               ================================================= */
+
+            count() AS matches,
+
+
+            /* =================================================
+               TAKIMLAR
+               ================================================= */
+
+            groupUniqArray(home_team) AS home_teams,
+            groupUniqArray(away_team) AS away_teams,
+
+
+            /* =================================================
+               MAÇ SONUÇLARI
+               ================================================= */
+
+            countIf(
+                ft_home > ft_away
+            ) AS home_wins,
+
+            countIf(
+                ft_home = ft_away
+            ) AS draws,
+
+            countIf(
+                ft_home < ft_away
+            ) AS away_wins,
+
+
+            /* =================================================
+               GOLLER
+               ================================================= */
+
+            sum(ft_home) AS home_goals,
+
+            sum(ft_away) AS away_goals,
+
+            sum(
+                ft_home + ft_away
+            ) AS total_goals,
+
+
+            /* =================================================
+               OVER
+               ================================================= */
+
+            countIf(
+                ft_home + ft_away >= 2
+            ) AS over_1_5,
+
+            countIf(
+                ft_home + ft_away >= 3
+            ) AS over_2_5,
+
+
+            /* =================================================
+               BTTS
+               ================================================= */
+
+            countIf(
+                ft_home > 0
+                AND
+                ft_away > 0
+            ) AS btts_yes,
+
+            countIf(
+                ft_home = 0
+                OR
+                ft_away = 0
+            ) AS btts_no,
+
+
+            /* =================================================
+               İLK YARI
+               ================================================= */
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+            ) AS ht_matches,
+
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+                AND
+                ht_home > ht_away
+            ) AS ht_home_wins,
+
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+                AND
+                ht_home = ht_away
+            ) AS ht_draws,
+
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+                AND
+                ht_home < ht_away
+            ) AS ht_away_wins,
+
+
+            /* =================================================
+               İKİNCİ YARI
+               ================================================= */
+
+            countIf(
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+            ) AS second_half_matches,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    ft_home - ht_home
+                )
+                >
+                (
+                    ft_away - ht_away
+                )
+
+            ) AS second_half_home_wins,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    ft_home - ht_home
+                )
+                =
+                (
+                    ft_away - ht_away
+                )
+
+            ) AS second_half_draws,
+
+
+            countIf(
+
+                ht_home IS NOT NULL
+                AND
+                ht_away IS NOT NULL
+
+                AND
+
+                (
+                    ft_home - ht_home
+                )
+                <
+                (
+                    ft_away - ht_away
+                )
+
+            ) AS second_half_away_wins
+
+
+        FROM betexplorer_matches
+
+
+        WHERE
+
+            country = {{String(country)}}
+
+            AND
+
+            league = {{String(league)}}
+
+            AND
+
+            season = {{String(season)}}
+
+            AND
+
+            ft_home IS NOT NULL
+
+            AND
+
+            ft_away IS NOT NULL
+
+    )
+
+TYPE ENDPOINT
