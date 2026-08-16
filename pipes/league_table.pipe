@@ -1,0 +1,499 @@
+DESCRIPTION >
+    Belirli bir ülke, lig ve sezon için takım bazlı lig tablosu.
+
+    Her takım için:
+    - Sıra
+    - Takım
+    - Maç
+    - Galibiyet
+    - Beraberlik
+    - Mağlubiyet
+    - Puan
+    - Attığı gol
+    - Yediği gol
+    - Averaj
+    - Maç başına attığı gol
+    - Maç başına yediği gol
+
+    İç saha:
+    - Maç
+    - Galibiyet
+    - Beraberlik
+    - Mağlubiyet
+    - Puan
+    - Attığı gol
+    - Yediği gol
+
+    Deplasman:
+    - Maç
+    - Galibiyet
+    - Beraberlik
+    - Mağlubiyet
+    - Puan
+    - Attığı gol
+    - Yediği gol
+
+    Gol:
+    - Over 1.5
+    - Over 2.5
+    - BTTS Var
+    - BTTS Yok
+
+    Parametreler:
+    country
+    league
+    season
+
+NODE league_table_query
+SQL >
+    %
+
+    SELECT
+
+        row_number() OVER (
+            ORDER BY
+                points DESC,
+                goal_difference DESC,
+                goals_for DESC,
+                team ASC
+        ) AS rank,
+
+        team,
+
+        /* =====================================================
+           GENEL
+           ===================================================== */
+
+        matches,
+
+        wins,
+        draws,
+        losses,
+
+        points,
+
+        goals_for,
+        goals_against,
+
+        goals_for - goals_against AS goal_difference,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                goals_for * 1.0 / matches
+            ),
+            2
+        ) AS goals_for_avg,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                goals_against * 1.0 / matches
+            ),
+            2
+        ) AS goals_against_avg,
+
+
+        /* =====================================================
+           İÇ SAHA
+           ===================================================== */
+
+        home_matches,
+        home_wins,
+        home_draws,
+        home_losses,
+        home_points,
+
+        home_goals,
+        home_goals_against,
+
+        home_goals - home_goals_against
+            AS home_goal_difference,
+
+
+        round(
+            if(
+                home_matches = 0,
+                0,
+                home_goals * 1.0 / home_matches
+            ),
+            2
+        ) AS home_goals_avg,
+
+
+        round(
+            if(
+                home_matches = 0,
+                0,
+                home_goals_against * 1.0 / home_matches
+            ),
+            2
+        ) AS home_goals_against_avg,
+
+
+        /* =====================================================
+           DEPLASMAN
+           ===================================================== */
+
+        away_matches,
+        away_wins,
+        away_draws,
+        away_losses,
+        away_points,
+
+        away_goals,
+        away_goals_against,
+
+        away_goals - away_goals_against
+            AS away_goal_difference,
+
+
+        round(
+            if(
+                away_matches = 0,
+                0,
+                away_goals * 1.0 / away_matches
+            ),
+            2
+        ) AS away_goals_avg,
+
+
+        round(
+            if(
+                away_matches = 0,
+                0,
+                away_goals_against * 1.0 / away_matches
+            ),
+            2
+        ) AS away_goals_against_avg,
+
+
+        /* =====================================================
+           GOL İSTATİSTİKLERİ
+           ===================================================== */
+
+        over_1_5,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                over_1_5 * 100.0 / matches
+            ),
+            2
+        ) AS over_1_5_pct,
+
+
+        over_2_5,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                over_2_5 * 100.0 / matches
+            ),
+            2
+        ) AS over_2_5_pct,
+
+
+        btts_yes,
+
+        btts_no,
+
+        round(
+            if(
+                matches = 0,
+                0,
+                btts_yes * 100.0 / matches
+            ),
+            2
+        ) AS btts_yes_pct,
+
+
+        round(
+            if(
+                matches = 0,
+                0,
+                btts_no * 100.0 / matches
+            ),
+            2
+        ) AS btts_no_pct
+
+
+    FROM
+    (
+
+        /* =====================================================
+           HOME + AWAY TAKIMLARI TEK TABLODA BİRLEŞTİR
+           ===================================================== */
+
+        SELECT
+
+            team,
+
+            sum(matches) AS matches,
+
+            sum(wins) AS wins,
+            sum(draws) AS draws,
+            sum(losses) AS losses,
+
+            sum(points) AS points,
+
+            sum(goals_for) AS goals_for,
+            sum(goals_against) AS goals_against,
+
+
+            /* İÇ SAHA */
+
+            sum(home_matches) AS home_matches,
+            sum(home_wins) AS home_wins,
+            sum(home_draws) AS home_draws,
+            sum(home_losses) AS home_losses,
+            sum(home_points) AS home_points,
+
+            sum(home_goals) AS home_goals,
+            sum(home_goals_against) AS home_goals_against,
+
+
+            /* DEPLASMAN */
+
+            sum(away_matches) AS away_matches,
+            sum(away_wins) AS away_wins,
+            sum(away_draws) AS away_draws,
+            sum(away_losses) AS away_losses,
+            sum(away_points) AS away_points,
+
+            sum(away_goals) AS away_goals,
+            sum(away_goals_against) AS away_goals_against,
+
+
+            /* GOL */
+
+            sum(over_1_5) AS over_1_5,
+            sum(over_2_5) AS over_2_5,
+
+            sum(btts_yes) AS btts_yes,
+            sum(btts_no) AS btts_no
+
+
+        FROM
+        (
+
+            /* =================================================
+               EV SAHİBİ TAKIM
+               ================================================= */
+
+            SELECT
+
+                home_team AS team,
+
+                1 AS matches,
+
+                if(ft_home > ft_away, 1, 0) AS wins,
+
+                if(ft_home = ft_away, 1, 0) AS draws,
+
+                if(ft_home < ft_away, 1, 0) AS losses,
+
+                if(
+                    ft_home > ft_away,
+                    3,
+                    if(ft_home = ft_away, 1, 0)
+                ) AS points,
+
+                ft_home AS goals_for,
+                ft_away AS goals_against,
+
+
+                /* İÇ SAHA */
+
+                1 AS home_matches,
+
+                if(ft_home > ft_away, 1, 0)
+                    AS home_wins,
+
+                if(ft_home = ft_away, 1, 0)
+                    AS home_draws,
+
+                if(ft_home < ft_away, 1, 0)
+                    AS home_losses,
+
+                if(
+                    ft_home > ft_away,
+                    3,
+                    if(ft_home = ft_away, 1, 0)
+                ) AS home_points,
+
+                ft_home AS home_goals,
+                ft_away AS home_goals_against,
+
+
+                /* DEPLASMAN */
+
+                0 AS away_matches,
+                0 AS away_wins,
+                0 AS away_draws,
+                0 AS away_losses,
+                0 AS away_points,
+                0 AS away_goals,
+                0 AS away_goals_against,
+
+
+                /* GOL */
+
+                if(
+                    ft_home + ft_away >= 2,
+                    1,
+                    0
+                ) AS over_1_5,
+
+                if(
+                    ft_home + ft_away >= 3,
+                    1,
+                    0
+                ) AS over_2_5,
+
+                if(
+                    ft_home > 0
+                    AND ft_away > 0,
+                    1,
+                    0
+                ) AS btts_yes,
+
+                if(
+                    ft_home = 0
+                    OR ft_away = 0,
+                    1,
+                    0
+                ) AS btts_no
+
+            FROM betexplorer_matches
+
+            WHERE
+
+                country = {{String(country)}}
+
+                AND league = {{String(league)}}
+
+                AND season = {{String(season)}}
+
+                AND ft_home IS NOT NULL
+                AND ft_away IS NOT NULL
+
+
+            UNION ALL
+
+
+            /* =================================================
+               DEPLASMAN TAKIMI
+               ================================================= */
+
+            SELECT
+
+                away_team AS team,
+
+                1 AS matches,
+
+                if(ft_away > ft_home, 1, 0) AS wins,
+
+                if(ft_home = ft_away, 1, 0) AS draws,
+
+                if(ft_away < ft_home, 1, 0) AS losses,
+
+                if(
+                    ft_away > ft_home,
+                    3,
+                    if(ft_home = ft_away, 1, 0)
+                ) AS points,
+
+                ft_away AS goals_for,
+                ft_home AS goals_against,
+
+
+                /* İÇ SAHA */
+
+                0 AS home_matches,
+                0 AS home_wins,
+                0 AS home_draws,
+                0 AS home_losses,
+                0 AS home_points,
+                0 AS home_goals,
+                0 AS home_goals_against,
+
+
+                /* DEPLASMAN */
+
+                1 AS away_matches,
+
+                if(ft_away > ft_home, 1, 0)
+                    AS away_wins,
+
+                if(ft_home = ft_away, 1, 0)
+                    AS away_draws,
+
+                if(ft_away < ft_home, 1, 0)
+                    AS away_losses,
+
+                if(
+                    ft_away > ft_home,
+                    3,
+                    if(ft_home = ft_away, 1, 0)
+                ) AS away_points,
+
+                ft_away AS away_goals,
+                ft_home AS away_goals_against,
+
+
+                /* GOL */
+
+                if(
+                    ft_home + ft_away >= 2,
+                    1,
+                    0
+                ) AS over_1_5,
+
+                if(
+                    ft_home + ft_away >= 3,
+                    1,
+                    0
+                ) AS over_2_5,
+
+                if(
+                    ft_home > 0
+                    AND ft_away > 0,
+                    1,
+                    0
+                ) AS btts_yes,
+
+                if(
+                    ft_home = 0
+                    OR ft_away = 0,
+                    1,
+                    0
+                ) AS btts_no
+
+            FROM betexplorer_matches
+
+            WHERE
+
+                country = {{String(country)}}
+
+                AND league = {{String(league)}}
+
+                AND season = {{String(season)}}
+
+                AND ft_home IS NOT NULL
+                AND ft_away IS NOT NULL
+
+        )
+
+        GROUP BY team
+
+    )
+
+    ORDER BY rank
+
+
+TYPE ENDPOINT
