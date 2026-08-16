@@ -19,29 +19,25 @@ SQL >
            LİG BİLGİSİ
            ===================================================== */
 
-        {{String(country)}} AS country,
+        {{String(country)}} AS result_country,
 
-        {{String(league)}} AS league,
+        {{String(league)}} AS result_league,
 
         {% if defined(season) %}
-        {{String(season)}} AS season,
+        {{String(season)}} AS result_season,
         {% else %}
-        'ALL' AS season,
+        'ALL' AS result_season,
         {% end %}
 
 
         /* =====================================================
-           GENEL MAÇ
+           GENEL
            ===================================================== */
 
         count() AS matches,
 
-
-        /* =====================================================
-           TAKIM SAYISI
-           ===================================================== */
-
         uniqExact(home_team) AS home_teams,
+
         uniqExact(away_team) AS away_teams,
 
 
@@ -71,6 +67,7 @@ SQL >
             2
         ) AS home_win_pct,
 
+
         round(
             if(
                 count() = 0,
@@ -79,6 +76,7 @@ SQL >
             ),
             2
         ) AS draw_pct,
+
 
         round(
             if(
@@ -98,7 +96,9 @@ SQL >
 
         sum(ft_away) AS away_goals,
 
-        sum(ft_home + ft_away) AS total_goals,
+        sum(
+            ft_home + ft_away
+        ) AS total_goals,
 
 
         round(
@@ -171,15 +171,13 @@ SQL >
 
         countIf(
             ft_home > 0
-            AND
-            ft_away > 0
+            AND ft_away > 0
         ) AS btts_yes,
 
 
         countIf(
             ft_home = 0
-            OR
-            ft_away = 0
+            OR ft_away = 0
         ) AS btts_no,
 
 
@@ -209,35 +207,28 @@ SQL >
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
+            AND ht_away IS NOT NULL
         ) AS ht_matches,
 
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
-            AND
-            ht_home > ht_away
+            AND ht_away IS NOT NULL
+            AND ht_home > ht_away
         ) AS ht_home_wins,
 
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
-            AND
-            ht_home = ht_away
+            AND ht_away IS NOT NULL
+            AND ht_home = ht_away
         ) AS ht_draws,
 
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
-            AND
-            ht_home < ht_away
+            AND ht_away IS NOT NULL
+            AND ht_home < ht_away
         ) AS ht_away_wins,
 
 
@@ -277,15 +268,13 @@ SQL >
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
+            AND ht_away IS NOT NULL
         ) AS second_half_matches,
 
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
+            AND ht_away IS NOT NULL
             AND
             (
                 ft_home - ht_home
@@ -299,8 +288,7 @@ SQL >
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
+            AND ht_away IS NOT NULL
             AND
             (
                 ft_home - ht_home
@@ -314,8 +302,7 @@ SQL >
 
         countIf(
             ht_home IS NOT NULL
-            AND
-            ht_away IS NOT NULL
+            AND ht_away IS NOT NULL
             AND
             (
                 ft_home - ht_home
@@ -360,37 +347,56 @@ SQL >
         ) AS second_half_away_win_pct
 
 
-    FROM betexplorer_matches
-
-
-    /* =========================================================
-       FİLTRELER
-       ========================================================= */
-
-    WHERE
-
-        country = {{String(country)}}
-
-        AND
-
-        league = {{String(league)}}
-
-
-        {% if defined(season) %}
-
-        AND
-
-        season = {{String(season)}}
-
-        {% end %}
-
+    FROM
+    (
 
         /* =====================================================
-           SADECE OYNANMIŞ MAÇLAR
+           FİLTRELEME ÖNCE YAPILIYOR
            ===================================================== */
 
-        AND ft_home IS NOT NULL
-        AND ft_away IS NOT NULL
+        SELECT
+
+            country,
+            league,
+            season,
+
+            home_team,
+            away_team,
+
+            ft_home,
+            ft_away,
+
+            ht_home,
+            ht_away
+
+        FROM betexplorer_matches
+
+        WHERE
+
+            country = {{String(country)}}
+
+            AND
+
+            league = {{String(league)}}
+
+            AND
+
+            ft_home IS NOT NULL
+
+            AND
+
+            ft_away IS NOT NULL
+
+
+            {% if defined(season) %}
+
+            AND
+
+            season = {{String(season)}}
+
+            {% end %}
+
+    )
 
 
 TYPE ENDPOINT
