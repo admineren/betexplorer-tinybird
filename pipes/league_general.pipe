@@ -2,6 +2,9 @@ DESCRIPTION >
     Bir lig ve sezonun genel yapısını özetler.
 
     Genel:
+    - Ülke
+    - Lig
+    - Sezon
     - Toplam maç
     - Takım sayısı
     - Ev sahibi galibiyetleri
@@ -13,7 +16,7 @@ DESCRIPTION >
     - Toplam gol
     - Ev sahibi golleri
     - Deplasman golleri
-    - Maç başına toplam gol
+    - Maç başına gol
     - Ev sahibi gol ortalaması
     - Deplasman gol ortalaması
 
@@ -34,9 +37,9 @@ DESCRIPTION >
     - Deplasman üstün
 
     Parametreler:
-    - country
-    - league
-    - season
+    country
+    league
+    season
 
 
 NODE league_general_query
@@ -50,29 +53,25 @@ SQL >
            LİG BİLGİSİ
            ===================================================== */
 
-        country,
-        league,
-        season,
+        {{String(country)}} AS country,
 
-        matches,
+        {{String(league)}} AS league,
 
-        length(
-            arrayDistinct(
-                arrayConcat(
-                    home_teams,
-                    away_teams
-                )
-            )
-        ) AS teams,
+        {{String(season)}} AS season,
 
 
         /* =====================================================
-           MAÇ SONUÇLARI
+           GENEL
            ===================================================== */
+
+        matches,
+
+        teams,
 
         home_wins,
         draws,
         away_wins,
+
 
         round(
             if(
@@ -83,6 +82,7 @@ SQL >
             2
         ) AS home_win_pct,
 
+
         round(
             if(
                 matches = 0,
@@ -91,6 +91,7 @@ SQL >
             ),
             2
         ) AS draw_pct,
+
 
         round(
             if(
@@ -107,9 +108,11 @@ SQL >
            ===================================================== */
 
         home_goals,
+
         away_goals,
 
         total_goals,
+
 
         round(
             if(
@@ -120,6 +123,7 @@ SQL >
             2
         ) AS goals_per_match,
 
+
         round(
             if(
                 matches = 0,
@@ -128,6 +132,7 @@ SQL >
             ),
             2
         ) AS home_goals_avg,
+
 
         round(
             if(
@@ -140,7 +145,7 @@ SQL >
 
 
         /* =====================================================
-           OVER / UNDER
+           OVER
            ===================================================== */
 
         over_1_5,
@@ -172,7 +177,9 @@ SQL >
            ===================================================== */
 
         btts_yes,
+
         btts_no,
+
 
         round(
             if(
@@ -182,6 +189,7 @@ SQL >
             ),
             2
         ) AS btts_yes_pct,
+
 
         round(
             if(
@@ -200,8 +208,11 @@ SQL >
         ht_matches,
 
         ht_home_wins,
+
         ht_draws,
+
         ht_away_wins,
+
 
         round(
             if(
@@ -212,6 +223,7 @@ SQL >
             2
         ) AS ht_home_win_pct,
 
+
         round(
             if(
                 ht_matches = 0,
@@ -220,6 +232,7 @@ SQL >
             ),
             2
         ) AS ht_draw_pct,
+
 
         round(
             if(
@@ -238,8 +251,11 @@ SQL >
         second_half_matches,
 
         second_half_home_wins,
+
         second_half_draws,
+
         second_half_away_wins,
+
 
         round(
             if(
@@ -251,6 +267,7 @@ SQL >
             2
         ) AS second_half_home_win_pct,
 
+
         round(
             if(
                 second_half_matches = 0,
@@ -260,6 +277,7 @@ SQL >
             ),
             2
         ) AS second_half_draw_pct,
+
 
         round(
             if(
@@ -277,24 +295,18 @@ SQL >
 
         SELECT
 
-            any(country) AS country,
-            any(league) AS league,
-            any(season) AS season,
-
-
             /* =================================================
-               MAÇ SAYISI
+               MAÇ
                ================================================= */
 
             count() AS matches,
 
 
             /* =================================================
-               TAKIMLAR
+               TAKIM SAYISI
                ================================================= */
 
-            groupUniqArray(home_team) AS home_teams,
-            groupUniqArray(away_team) AS away_teams,
+            uniqExact(home_team) AS teams,
 
 
             /* =================================================
@@ -305,9 +317,11 @@ SQL >
                 ft_home > ft_away
             ) AS home_wins,
 
+
             countIf(
                 ft_home = ft_away
             ) AS draws,
+
 
             countIf(
                 ft_home < ft_away
@@ -335,6 +349,7 @@ SQL >
                 ft_home + ft_away >= 2
             ) AS over_1_5,
 
+
             countIf(
                 ft_home + ft_away >= 3
             ) AS over_2_5,
@@ -349,6 +364,7 @@ SQL >
                 AND
                 ft_away > 0
             ) AS btts_yes,
+
 
             countIf(
                 ft_home = 0
