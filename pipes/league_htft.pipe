@@ -1,0 +1,323 @@
+DESCRIPTION >
+    League-level HT/FT analysis.
+    Shows first-half result distribution,
+    HT -> FT transitions and lead retention.
+    Country and league are required.
+    Season is optional.
+
+NODE league_htft_query
+SQL >
+    WITH filtered_matches AS
+    (
+        SELECT
+            match_id,
+            country,
+            league,
+            season,
+            ht_home,
+            ht_away,
+            ft_home,
+            ft_away
+        FROM betexplorer_matches
+        WHERE
+            country = {{String(country)}}
+            AND league = {{String(league)}}
+            {% if defined(season) %}
+            AND season = {{String(season)}}
+            {% end %}
+            AND ht_home IS NOT NULL
+            AND ht_away IS NOT NULL
+            AND ft_home IS NOT NULL
+            AND ft_away IS NOT NULL
+    ),
+
+    match_results AS
+    (
+        SELECT
+            *,
+            
+            multiIf(
+                ht_home > ht_away, 'H',
+                ht_home < ht_away, 'A',
+                'D'
+            ) AS ht_result,
+
+            multiIf(
+                ft_home > ft_away, 'H',
+                ft_home < ft_away, 'A',
+                'D'
+            ) AS ft_result
+
+        FROM filtered_matches
+    ),
+
+    statistics AS
+    (
+        SELECT
+
+            count() AS ht_matches,
+
+            countIf(ht_result = 'H') AS ht_home,
+            countIf(ht_result = 'D') AS ht_draw,
+            countIf(ht_result = 'A') AS ht_away,
+
+            /* HT -> FT */
+
+            countIf(ht_result = 'H' AND ft_result = 'H') AS h_h,
+            countIf(ht_result = 'H' AND ft_result = 'D') AS h_d,
+            countIf(ht_result = 'H' AND ft_result = 'A') AS h_a,
+
+            countIf(ht_result = 'D' AND ft_result = 'H') AS d_h,
+            countIf(ht_result = 'D' AND ft_result = 'D') AS d_d,
+            countIf(ht_result = 'D' AND ft_result = 'A') AS d_a,
+
+            countIf(ht_result = 'A' AND ft_result = 'H') AS a_h,
+            countIf(ht_result = 'A' AND ft_result = 'D') AS a_d,
+            countIf(ht_result = 'A' AND ft_result = 'A') AS a_a
+
+        FROM match_results
+    )
+
+    SELECT
+
+        {{String(country)}} AS country,
+        {{String(league)}} AS league,
+
+        {% if defined(season) %}
+        {{String(season)}} AS season,
+        {% else %}
+        'ALL' AS season,
+        {% end %}
+
+        ht_matches AS matches,
+        ht_matches,
+
+        /* =========================================
+           FIRST HALF RESULT
+           ========================================= */
+
+        ht_home,
+        ht_draw,
+        ht_away,
+
+        round(ht_home * 100.0 / nullIf(ht_matches, 0), 2)
+            AS ht_home_pct,
+
+        round(ht_draw * 100.0 / nullIf(ht_matches, 0), 2)
+            AS ht_draw_pct,
+
+        round(ht_away * 100.0 / nullIf(ht_matches, 0), 2)
+            AS ht_away_pct,
+
+
+        /* =========================================
+           HT -> FT COUNTS
+           ========================================= */
+
+        h_h,
+        h_d,
+        h_a,
+
+        d_h,
+        d_d,
+        d_a,
+
+        a_h,
+        a_d,
+        a_a,
+
+
+        /* =========================================
+           HT -> FT GENERAL PERCENTAGES
+           ========================================= */
+
+        round(h_h * 100.0 / nullIf(ht_matches, 0), 2)
+            AS h_h_pct,
+
+        round(h_d * 100.0 / nullIf(ht_matches, 0), 2)
+            AS h_d_pct,
+
+        round(h_a * 100.0 / nullIf(ht_matches, 0), 2)
+            AS h_a_pct,
+
+        round(d_h * 100.0 / nullIf(ht_matches, 0), 2)
+            AS d_h_pct,
+
+        round(d_d * 100.0 / nullIf(ht_matches, 0), 2)
+            AS d_d_pct,
+
+        round(d_a * 100.0 / nullIf(ht_matches, 0), 2)
+            AS d_a_pct,
+
+        round(a_h * 100.0 / nullIf(ht_matches, 0), 2)
+            AS a_h_pct,
+
+        round(a_d * 100.0 / nullIf(ht_matches, 0), 2)
+            AS a_d_pct,
+
+        round(a_a * 100.0 / nullIf(ht_matches, 0), 2)
+            AS a_a_pct,
+
+
+        /* =========================================
+           HOME HT LEAD
+           ========================================= */
+
+        (h_h + h_d + h_a) AS ht_home_lead_matches,
+
+        h_h AS ht_home_won,
+        h_d AS ht_home_draw,
+        h_a AS ht_home_lost,
+
+        round(
+            h_h * 100.0 /
+            nullIf(h_h + h_d + h_a, 0),
+            2
+        ) AS ht_home_hold_pct,
+
+        round(
+            h_d * 100.0 /
+            nullIf(h_h + h_d + h_a, 0),
+            2
+        ) AS ht_home_draw_pct,
+
+        round(
+            h_a * 100.0 /
+            nullIf(h_h + h_d + h_a, 0),
+            2
+        ) AS ht_home_lose_pct,
+
+
+        /* =========================================
+           DRAW AT HALF TIME
+           ========================================= */
+
+        (d_h + d_d + d_a) AS ht_draw_matches,
+
+        d_h AS ht_draw_home_win,
+        d_d AS ht_draw_stay_draw,
+        d_a AS ht_draw_away_win,
+
+        round(
+            d_h * 100.0 /
+            nullIf(d_h + d_d + d_a, 0),
+            2
+        ) AS ht_draw_home_win_pct,
+
+        round(
+            d_d * 100.0 /
+            nullIf(d_h + d_d + d_a, 0),
+            2
+        ) AS ht_draw_stay_draw_pct,
+
+        round(
+            d_a * 100.0 /
+            nullIf(d_h + d_d + d_a, 0),
+            2
+        ) AS ht_draw_away_win_pct,
+
+
+        /* =========================================
+           AWAY HT LEAD
+           ========================================= */
+
+        (a_h + a_d + a_a) AS ht_away_lead_matches,
+
+        a_a AS ht_away_won,
+        a_d AS ht_away_draw,
+        a_h AS ht_away_lost,
+
+        round(
+            a_a * 100.0 /
+            nullIf(a_h + a_d + a_a, 0),
+            2
+        ) AS ht_away_hold_pct,
+
+        round(
+            a_d * 100.0 /
+            nullIf(a_h + a_d + a_a, 0),
+            2
+        ) AS ht_away_draw_pct,
+
+        round(
+            a_h * 100.0 /
+            nullIf(a_h + a_d + a_a, 0),
+            2
+        ) AS ht_away_lose_pct,
+
+
+        /* =========================================
+           RESULT RETENTION / CHANGE
+           ========================================= */
+
+        (
+            h_h +
+            d_d +
+            a_a
+        ) AS ht_result_held,
+
+        (
+            h_d +
+            h_a +
+            d_h +
+            d_a +
+            a_h +
+            a_d
+        ) AS ht_result_changed,
+
+        round(
+            (h_h + d_d + a_a) * 100.0 /
+            nullIf(ht_matches, 0),
+            2
+        ) AS ht_result_held_pct,
+
+        round(
+            (
+                h_d +
+                h_a +
+                d_h +
+                d_a +
+                a_h +
+                a_d
+            ) * 100.0 /
+            nullIf(ht_matches, 0),
+            2
+        ) AS ht_result_changed_pct,
+
+
+        /* =========================================
+           HALF-TIME LEADER
+           ========================================= */
+
+        (h_h + h_d + a_h + a_d + a_a + h_a)
+            AS ht_leader_matches,
+
+        (h_h + a_a)
+            AS ht_leader_won,
+
+        (h_d + h_a + a_h + a_d)
+            AS ht_leader_dropped_points,
+
+        round(
+            (h_h + a_a) * 100.0 /
+            nullIf(
+                h_h + h_d + h_a +
+                a_h + a_d + a_a,
+                0
+            ),
+            2
+        ) AS ht_leader_won_pct,
+
+        round(
+            (h_d + h_a + a_h + a_d) * 100.0 /
+            nullIf(
+                h_h + h_d + h_a +
+                a_h + a_d + a_a,
+                0
+            ),
+            2
+        ) AS ht_leader_dropped_points_pct
+
+    FROM statistics
+
+TYPE ENDPOINT
