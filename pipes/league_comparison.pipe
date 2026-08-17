@@ -6,19 +6,17 @@ DESCRIPTION >
 NODE league_comparison_query
 SQL >
 
-    %
-
     SELECT
 
         /* =====================================================
            LİG BİLGİLERİ
            ===================================================== */
 
-        l1.country AS league1_country,
-        l1.league  AS league1,
+        l1.league_country AS league1_country,
+        l1.league_name AS league1,
 
-        l2.country AS league2_country,
-        l2.league  AS league2,
+        l2.league_country AS league2_country,
+        l2.league_name AS league2,
 
 
         /* =====================================================
@@ -27,9 +25,6 @@ SQL >
 
         l1.matches AS league1_matches,
         l2.matches AS league2_matches,
-
-        l1.teams AS league1_teams,
-        l2.teams AS league2_teams,
 
         round(
             l1.matches * 100.0 /
@@ -328,41 +323,38 @@ SQL >
 
         SELECT
 
-            any(country) AS country,
-            any(league) AS league,
+            '{{String(country1)}}'
+                AS league_country,
+
+            '{{String(league1)}}'
+                AS league_name,
 
             count() AS matches,
 
-            uniqExact(home_team) +
-            uniqExact(away_team) AS teams,
+            countIf(ft_home > ft_away)
+                AS home_wins,
 
-            countIf(
-                ft_home > ft_away
-            ) AS home_wins,
+            countIf(ft_home = ft_away)
+                AS draws,
 
-            countIf(
-                ft_home = ft_away
-            ) AS draws,
-
-            countIf(
-                ft_home < ft_away
-            ) AS away_wins,
+            countIf(ft_home < ft_away)
+                AS away_wins,
 
             round(
                 countIf(ft_home > ft_away)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS home_win_pct,
 
             round(
                 countIf(ft_home = ft_away)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS draw_pct,
 
             round(
                 countIf(ft_home < ft_away)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS away_win_pct,
 
@@ -392,7 +384,7 @@ SQL >
             ) AS away_goals_avg,
 
 
-            /* GOL DAĞILIMI */
+            /* TOPLAM GOL DAĞILIMI */
 
             countIf(
                 ft_home + ft_away <= 1
@@ -411,76 +403,83 @@ SQL >
             ) AS total_goals_6_plus,
 
             round(
-                countIf(ft_home + ft_away <= 1)
-                * 100.0 / count(),
+                countIf(
+                    ft_home + ft_away <= 1
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_0_1_pct,
 
             round(
                 countIf(
                     ft_home + ft_away BETWEEN 2 AND 3
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_2_3_pct,
 
             round(
                 countIf(
                     ft_home + ft_away BETWEEN 4 AND 5
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_4_5_pct,
 
             round(
-                countIf(ft_home + ft_away >= 6)
-                * 100.0 / count(),
+                countIf(
+                    ft_home + ft_away >= 6
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_6_plus_pct,
 
 
             /* OVER */
 
-            countIf(ft_home + ft_away >= 1)
-                AS over_0_5,
+            countIf(
+                ft_home + ft_away >= 1
+            ) AS over_0_5,
 
-            countIf(ft_home + ft_away >= 2)
-                AS over_1_5,
+            countIf(
+                ft_home + ft_away >= 2
+            ) AS over_1_5,
 
-            countIf(ft_home + ft_away >= 3)
-                AS over_2_5,
+            countIf(
+                ft_home + ft_away >= 3
+            ) AS over_2_5,
 
-            countIf(ft_home + ft_away >= 4)
-                AS over_3_5,
+            countIf(
+                ft_home + ft_away >= 4
+            ) AS over_3_5,
 
-            countIf(ft_home + ft_away >= 5)
-                AS over_4_5,
+            countIf(
+                ft_home + ft_away >= 5
+            ) AS over_4_5,
 
             round(
                 countIf(ft_home + ft_away >= 1)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_0_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 2)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_1_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 3)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_2_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 4)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_3_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 5)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_4_5_pct,
 
@@ -501,7 +500,7 @@ SQL >
                 countIf(
                     ft_home > 0
                     AND ft_away > 0
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS btts_yes_pct,
 
@@ -509,7 +508,7 @@ SQL >
                 countIf(
                     ft_home = 0
                     OR ft_away = 0
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS btts_no_pct,
 
@@ -520,43 +519,43 @@ SQL >
 
             round(
                 countIf(ht_home + ht_away = 0)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_0_pct,
 
             round(
                 countIf(ht_home + ht_away = 1)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_1_pct,
 
             round(
                 countIf(ht_home + ht_away = 2)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_2_pct,
 
             round(
                 countIf(ht_home + ht_away >= 3)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_3_plus_pct,
 
             round(
                 countIf(ht_home + ht_away >= 1)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_over_0_5_pct,
 
             round(
                 countIf(ht_home + ht_away >= 2)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_over_1_5_pct,
 
             round(
                 countIf(ht_home + ht_away >= 3)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_over_2_5_pct,
 
@@ -565,50 +564,38 @@ SQL >
 
             round(
                 countIf(
-                    (ft_home - ht_home)
-                    +
+                    (ft_home - ht_home) +
                     (ft_away - ht_away) >= 1
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS second_half_over_0_5_pct,
 
             round(
                 countIf(
-                    (ft_home - ht_home)
-                    +
+                    (ft_home - ht_home) +
                     (ft_away - ht_away) >= 2
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS second_half_over_1_5_pct,
 
             round(
                 countIf(
-                    (ft_home - ht_home)
-                    +
+                    (ft_home - ht_home) +
                     (ft_away - ht_away) >= 3
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS second_half_over_2_5_pct
 
-
-        FROM betexplorer_matches
+        FROM matches
 
         WHERE
             country = {{String(country1)}}
-
             AND league = {{String(league1)}}
-
             AND ft_home IS NOT NULL
             AND ft_away IS NOT NULL
 
-            {% if defined(season1) %}
-            AND season = {{String(season1)}}
-            {% end %}
-
     ) AS l1
-
-
-CROSS JOIN
+    CROSS JOIN
     (
 
         /* =====================================================
@@ -617,13 +604,13 @@ CROSS JOIN
 
         SELECT
 
-            any(country) AS country,
-            any(league) AS league,
+            '{{String(country2)}}'
+                AS league_country,
+
+            '{{String(league2)}}'
+                AS league_name,
 
             count() AS matches,
-
-            uniqExact(home_team) +
-            uniqExact(away_team) AS teams,
 
             countIf(ft_home > ft_away)
                 AS home_wins,
@@ -636,22 +623,24 @@ CROSS JOIN
 
             round(
                 countIf(ft_home > ft_away)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS home_win_pct,
 
             round(
                 countIf(ft_home = ft_away)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS draw_pct,
 
             round(
                 countIf(ft_home < ft_away)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS away_win_pct,
 
+
+            /* GOLLER */
 
             sum(ft_home) AS home_goals,
 
@@ -676,6 +665,8 @@ CROSS JOIN
             ) AS away_goals_avg,
 
 
+            /* TOPLAM GOL DAĞILIMI */
+
             countIf(
                 ft_home + ft_away <= 1
             ) AS total_goals_0_1,
@@ -693,77 +684,88 @@ CROSS JOIN
             ) AS total_goals_6_plus,
 
             round(
-                countIf(ft_home + ft_away <= 1)
-                * 100.0 / count(),
+                countIf(
+                    ft_home + ft_away <= 1
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_0_1_pct,
 
             round(
                 countIf(
                     ft_home + ft_away BETWEEN 2 AND 3
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_2_3_pct,
 
             round(
                 countIf(
                     ft_home + ft_away BETWEEN 4 AND 5
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_4_5_pct,
 
             round(
-                countIf(ft_home + ft_away >= 6)
-                * 100.0 / count(),
+                countIf(
+                    ft_home + ft_away >= 6
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS total_goals_6_plus_pct,
 
 
-            countIf(ft_home + ft_away >= 1)
-                AS over_0_5,
+            /* OVER */
 
-            countIf(ft_home + ft_away >= 2)
-                AS over_1_5,
+            countIf(
+                ft_home + ft_away >= 1
+            ) AS over_0_5,
 
-            countIf(ft_home + ft_away >= 3)
-                AS over_2_5,
+            countIf(
+                ft_home + ft_away >= 2
+            ) AS over_1_5,
 
-            countIf(ft_home + ft_away >= 4)
-                AS over_3_5,
+            countIf(
+                ft_home + ft_away >= 3
+            ) AS over_2_5,
 
-            countIf(ft_home + ft_away >= 5)
-                AS over_4_5,
+            countIf(
+                ft_home + ft_away >= 4
+            ) AS over_3_5,
+
+            countIf(
+                ft_home + ft_away >= 5
+            ) AS over_4_5,
 
             round(
                 countIf(ft_home + ft_away >= 1)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_0_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 2)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_1_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 3)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_2_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 4)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_3_5_pct,
 
             round(
                 countIf(ft_home + ft_away >= 5)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS over_4_5_pct,
 
+
+            /* BTTS */
 
             countIf(
                 ft_home > 0
@@ -779,7 +781,7 @@ CROSS JOIN
                 countIf(
                     ft_home > 0
                     AND ft_away > 0
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS btts_yes_pct,
 
@@ -787,97 +789,91 @@ CROSS JOIN
                 countIf(
                     ft_home = 0
                     OR ft_away = 0
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS btts_no_pct,
 
+
+            /* İLK YARI */
 
             count() AS ht_matches,
 
             round(
                 countIf(ht_home + ht_away = 0)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_0_pct,
 
             round(
                 countIf(ht_home + ht_away = 1)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_1_pct,
 
             round(
                 countIf(ht_home + ht_away = 2)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_2_pct,
 
             round(
                 countIf(ht_home + ht_away >= 3)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_total_goals_3_plus_pct,
 
             round(
                 countIf(ht_home + ht_away >= 1)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_over_0_5_pct,
 
             round(
                 countIf(ht_home + ht_away >= 2)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_over_1_5_pct,
 
             round(
                 countIf(ht_home + ht_away >= 3)
-                * 100.0 / count(),
+                * 100.0 / nullIf(count(), 0),
                 2
             ) AS ht_over_2_5_pct,
 
 
+            /* İKİNCİ YARI */
+
             round(
                 countIf(
-                    (ft_home - ht_home)
-                    +
+                    (ft_home - ht_home) +
                     (ft_away - ht_away) >= 1
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS second_half_over_0_5_pct,
 
             round(
                 countIf(
-                    (ft_home - ht_home)
-                    +
+                    (ft_home - ht_home) +
                     (ft_away - ht_away) >= 2
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS second_half_over_1_5_pct,
 
             round(
                 countIf(
-                    (ft_home - ht_home)
-                    +
+                    (ft_home - ht_home) +
                     (ft_away - ht_away) >= 3
-                ) * 100.0 / count(),
+                ) * 100.0 / nullIf(count(), 0),
                 2
             ) AS second_half_over_2_5_pct
 
-
-        FROM betexplorer_matches
+        FROM matches
 
         WHERE
             country = {{String(country2)}}
-
             AND league = {{String(league2)}}
-
             AND ft_home IS NOT NULL
             AND ft_away IS NOT NULL
-
-            {% if defined(season2) %}
-            AND season = {{String(season2)}}
-            {% end %}
 
     ) AS l2
 
