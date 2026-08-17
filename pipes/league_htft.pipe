@@ -7,6 +7,7 @@ DESCRIPTION >
 
 NODE league_htft_query
 SQL >
+%
     WITH filtered_matches AS
     (
         SELECT
