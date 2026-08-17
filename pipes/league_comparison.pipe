@@ -5,7 +5,7 @@ DESCRIPTION >
 
 NODE league_comparison_query
 SQL >
-
+%
     SELECT
 
         /* =====================================================
