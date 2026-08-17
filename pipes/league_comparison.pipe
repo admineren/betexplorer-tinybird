@@ -3,7 +3,7 @@ DESCRIPTION >
     Genel sonuçlar, gol yapısı, Over/Under, BTTS ve ilk yarı
     istatistiklerini iki lig arasında karşılaştırmalı olarak döndürür.
 
-NODE league_comparison
+NODE league_comparison_query
 SQL >
 
     %
