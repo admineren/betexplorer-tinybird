@@ -11,7 +11,11 @@ DESCRIPTION >
   - CUSTOM: market + range_min/range_max
 
   ODDS_BAND:
-  - Tüm marketlerde aynı oran bantları kullanılır.
+  - HOME ve AWAY aynı oran bantlarını kullanır.
+  - DRAW için ayrı ve daha detaylı oran bantları kullanılır.
+  - DRAW oranları 2.20 civarından başlar.
+  - DRAW 3.00-4.00 aralığı daha küçük bantlara ayrılmıştır.
+  - 4.00 üzeri oranlar ayrıca ayrılmıştır.
   - band_order ile sayısal sıralama yapılır.
   - Her bantta maç sayısı ve H/D/A adetleri tutulur.
   - H/D/A yüzdeleri ayrıca hesaplanır.
@@ -168,25 +172,31 @@ SELECT
     'DRAW' AS market,
 
     CASE
-        WHEN draw_odds < 1.30 THEN '< 1.30'
-        WHEN draw_odds < 1.50 THEN '1.30-1.49'
-        WHEN draw_odds < 1.80 THEN '1.50-1.79'
-        WHEN draw_odds < 2.10 THEN '1.80-2.09'
-        WHEN draw_odds < 2.50 THEN '2.10-2.49'
-        WHEN draw_odds < 3.00 THEN '2.50-2.99'
-        WHEN draw_odds < 4.00 THEN '3.00-3.99'
-        ELSE '>= 4.00'
+        WHEN draw_odds < 2.20 THEN '< 2.20'
+        WHEN draw_odds < 2.50 THEN '2.20-2.49'
+        WHEN draw_odds < 2.75 THEN '2.50-2.74'
+        WHEN draw_odds < 3.00 THEN '2.75-2.99'
+        WHEN draw_odds < 3.25 THEN '3.00-3.24'
+        WHEN draw_odds < 3.50 THEN '3.25-3.49'
+        WHEN draw_odds < 3.75 THEN '3.50-3.74'
+        WHEN draw_odds < 4.00 THEN '3.75-3.99'
+        WHEN draw_odds < 4.50 THEN '4.00-4.49'
+        WHEN draw_odds < 5.00 THEN '4.50-4.99'
+        ELSE '>= 5.00'
     END AS odds_band,
 
     CASE
-        WHEN draw_odds < 1.30 THEN 1
-        WHEN draw_odds < 1.50 THEN 2
-        WHEN draw_odds < 1.80 THEN 3
-        WHEN draw_odds < 2.10 THEN 4
-        WHEN draw_odds < 2.50 THEN 5
-        WHEN draw_odds < 3.00 THEN 6
-        WHEN draw_odds < 4.00 THEN 7
-        ELSE 8
+        WHEN draw_odds < 2.20 THEN 1
+        WHEN draw_odds < 2.50 THEN 2
+        WHEN draw_odds < 2.75 THEN 3
+        WHEN draw_odds < 3.00 THEN 4
+        WHEN draw_odds < 3.25 THEN 5
+        WHEN draw_odds < 3.50 THEN 6
+        WHEN draw_odds < 3.75 THEN 7
+        WHEN draw_odds < 4.00 THEN 8
+        WHEN draw_odds < 4.50 THEN 9
+        WHEN draw_odds < 5.00 THEN 10
+        ELSE 11
     END AS band_order,
 
     count() AS matches,
@@ -377,7 +387,7 @@ AND
     (
         lower({{String(market)}}) = 'home'
         AND home_odds BETWEEN
-            {{Float64(target_odds)}} - {{Float64(tolerance)}}
+            {{Float64(target_odds)}} - {{Float64(tolerance)}
             AND
             {{Float64(target_odds)}} + {{Float64(tolerance)}}
     )
@@ -503,6 +513,7 @@ AND
 
 
 ORDER BY
+
     CASE
         WHEN section = 'GENERAL' THEN 0
         WHEN section = 'ODDS_BAND' THEN 1
