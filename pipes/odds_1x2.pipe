@@ -10,29 +10,27 @@ DESCRIPTION >
   - CUSTOM: market + target_odds/tolerance
   - CUSTOM: market + range_min/range_max
 
-  CUSTOM iki farklı şekilde kullanılabilir:
-
-  1) Hedef oran + tolerans:
-     market=home
-     target_odds=1.72
-     tolerance=0.08
-
-     => 1.64 - 1.80
-
-  2) Doğrudan aralık:
-     market=home
-     range_min=1.60
-     range_max=1.85
+  ODDS_BAND:
+  - Tüm marketlerde aynı oran bantları kullanılır.
+  - band_order ile sayısal sıralama yapılır.
+  - Her bantta maç sayısı ve H/D/A adetleri tutulur.
+  - H/D/A yüzdeleri ayrıca hesaplanır.
 
 
 NODE odds_1x2_query
 SQL >
 %
 
+/* ============================================================
+   GENERAL
+   ============================================================ */
+
 SELECT
     'GENERAL' AS section,
     'ALL' AS market,
     'ALL' AS odds_band,
+
+    toUInt8(0) AS band_order,
 
     count() AS matches,
 
@@ -82,6 +80,10 @@ WHERE has_odds = 'True'
 UNION ALL
 
 
+/* ============================================================
+   HOME ODDS
+   ============================================================ */
+
 SELECT
     'ODDS_BAND' AS section,
     'HOME' AS market,
@@ -97,7 +99,19 @@ SELECT
         ELSE '>= 4.00'
     END AS odds_band,
 
+    CASE
+        WHEN home_odds < 1.30 THEN 1
+        WHEN home_odds < 1.50 THEN 2
+        WHEN home_odds < 1.80 THEN 3
+        WHEN home_odds < 2.10 THEN 4
+        WHEN home_odds < 2.50 THEN 5
+        WHEN home_odds < 3.00 THEN 6
+        WHEN home_odds < 4.00 THEN 7
+        ELSE 8
+    END AS band_order,
+
     count() AS matches,
+
     count() AS full_1x2_matches,
 
     round(avg(home_odds), 2) AS avg_home_odds,
@@ -137,11 +151,17 @@ WHERE has_odds = 'True'
   AND season = {{String(season)}}
 {% end %}
 
-GROUP BY odds_band
+GROUP BY
+    odds_band,
+    band_order
 
 
 UNION ALL
 
+
+/* ============================================================
+   DRAW ODDS
+   ============================================================ */
 
 SELECT
     'ODDS_BAND' AS section,
@@ -158,7 +178,19 @@ SELECT
         ELSE '>= 4.00'
     END AS odds_band,
 
+    CASE
+        WHEN draw_odds < 1.30 THEN 1
+        WHEN draw_odds < 1.50 THEN 2
+        WHEN draw_odds < 1.80 THEN 3
+        WHEN draw_odds < 2.10 THEN 4
+        WHEN draw_odds < 2.50 THEN 5
+        WHEN draw_odds < 3.00 THEN 6
+        WHEN draw_odds < 4.00 THEN 7
+        ELSE 8
+    END AS band_order,
+
     count() AS matches,
+
     count() AS full_1x2_matches,
 
     round(avg(home_odds), 2) AS avg_home_odds,
@@ -198,11 +230,17 @@ WHERE has_odds = 'True'
   AND season = {{String(season)}}
 {% end %}
 
-GROUP BY odds_band
+GROUP BY
+    odds_band,
+    band_order
 
 
 UNION ALL
 
+
+/* ============================================================
+   AWAY ODDS
+   ============================================================ */
 
 SELECT
     'ODDS_BAND' AS section,
@@ -219,7 +257,19 @@ SELECT
         ELSE '>= 4.00'
     END AS odds_band,
 
+    CASE
+        WHEN away_odds < 1.30 THEN 1
+        WHEN away_odds < 1.50 THEN 2
+        WHEN away_odds < 1.80 THEN 3
+        WHEN away_odds < 2.10 THEN 4
+        WHEN away_odds < 2.50 THEN 5
+        WHEN away_odds < 3.00 THEN 6
+        WHEN away_odds < 4.00 THEN 7
+        ELSE 8
+    END AS band_order,
+
     count() AS matches,
+
     count() AS full_1x2_matches,
 
     round(avg(home_odds), 2) AS avg_home_odds,
@@ -259,22 +309,27 @@ WHERE has_odds = 'True'
   AND season = {{String(season)}}
 {% end %}
 
-GROUP BY odds_band
+GROUP BY
+    odds_band,
+    band_order
 
+
+/* ============================================================
+   CUSTOM - TARGET + TOLERANCE
+   ============================================================ */
 
 {% if defined(market) %}
-
 {% if defined(target_odds) %}
-
 {% if defined(tolerance) %}
 
 UNION ALL
-
 
 SELECT
     'CUSTOM' AS section,
     upper({{String(market)}}) AS market,
     'CUSTOM_RANGE' AS odds_band,
+
+    toUInt8(0) AS band_order,
 
     count() AS matches,
     count() AS full_1x2_matches,
@@ -317,55 +372,58 @@ WHERE has_odds = 'True'
   AND season = {{String(season)}}
 {% end %}
 
-  AND
-  (
-      (
-          lower({{String(market)}}) = 'home'
-          AND home_odds BETWEEN
-              {{Float64(target_odds)}} - {{Float64(tolerance)}}
-              AND
-              {{Float64(target_odds)}} + {{Float64(tolerance)}}
-      )
+AND
+(
+    (
+        lower({{String(market)}}) = 'home'
+        AND home_odds BETWEEN
+            {{Float64(target_odds)}} - {{Float64(tolerance)}
+            AND
+            {{Float64(target_odds)}} + {{Float64(tolerance)}}
+    )
 
-      OR
+    OR
 
-      (
-          lower({{String(market)}}) = 'draw'
-          AND draw_odds BETWEEN
-              {{Float64(target_odds)}} - {{Float64(tolerance)}}
-              AND
-              {{Float64(target_odds)}} + {{Float64(tolerance)}}
-      )
+    (
+        lower({{String(market)}}) = 'draw'
+        AND draw_odds BETWEEN
+            {{Float64(target_odds)}} - {{Float64(tolerance)}}
+            AND
+            {{Float64(target_odds)}} + {{Float64(tolerance)}}
+    )
 
-      OR
+    OR
 
-      (
-          lower({{String(market)}}) = 'away'
-          AND away_odds BETWEEN
-              {{Float64(target_odds)}} - {{Float64(tolerance)}}
-              AND
-              {{Float64(target_odds)}} + {{Float64(tolerance)}}
-      )
-  )
+    (
+        lower({{String(market)}}) = 'away'
+        AND away_odds BETWEEN
+            {{Float64(target_odds)}} - {{Float64(tolerance)}}
+            AND
+            {{Float64(target_odds)}} + {{Float64(tolerance)}}
+    )
+)
 
 {% end %}
 {% end %}
 {% end %}
 
+
+/* ============================================================
+   CUSTOM - DIRECT RANGE
+   ============================================================ */
 
 {% if defined(market) %}
-
 {% if defined(range_min) %}
-
 {% if defined(range_max) %}
 
 UNION ALL
-
 
 SELECT
     'CUSTOM' AS section,
     upper({{String(market)}}) AS market,
     'CUSTOM_RANGE' AS odds_band,
+
+    toUInt8(0) AS band_order,
 
     count() AS matches,
     count() AS full_1x2_matches,
@@ -408,36 +466,36 @@ WHERE has_odds = 'True'
   AND season = {{String(season)}}
 {% end %}
 
-  AND
-  (
-      (
-          lower({{String(market)}}) = 'home'
-          AND home_odds BETWEEN
-              {{Float64(range_min)}}
-              AND
-              {{Float64(range_max)}}
-      )
+AND
+(
+    (
+        lower({{String(market)}}) = 'home'
+        AND home_odds BETWEEN
+            {{Float64(range_min)}}
+            AND
+            {{Float64(range_max)}}
+    )
 
-      OR
+    OR
 
-      (
-          lower({{String(market)}}) = 'draw'
-          AND draw_odds BETWEEN
-              {{Float64(range_min)}}
-              AND
-              {{Float64(range_max)}}
-      )
+    (
+        lower({{String(market)}}) = 'draw'
+        AND draw_odds BETWEEN
+            {{Float64(range_min)}}
+            AND
+            {{Float64(range_max)}}
+    )
 
-      OR
+    OR
 
-      (
-          lower({{String(market)}}) = 'away'
-          AND away_odds BETWEEN
-              {{Float64(range_min)}}
-              AND
-              {{Float64(range_max)}}
-      )
-  )
+    (
+        lower({{String(market)}}) = 'away'
+        AND away_odds BETWEEN
+            {{Float64(range_min)}}
+            AND
+            {{Float64(range_max)}}
+    )
+)
 
 {% end %}
 {% end %}
@@ -445,7 +503,6 @@ WHERE has_odds = 'True'
 
 
 ORDER BY
-
     CASE
         WHEN section = 'GENERAL' THEN 0
         WHEN section = 'ODDS_BAND' THEN 1
@@ -461,87 +518,7 @@ ORDER BY
         ELSE 9
     END,
 
-    CASE
+    band_order
 
-        /* HOME */
-        WHEN market = 'HOME'
-             AND odds_band = '< 1.30' THEN 1
-
-        WHEN market = 'HOME'
-             AND odds_band = '1.30-1.49' THEN 2
-
-        WHEN market = 'HOME'
-             AND odds_band = '1.50-1.79' THEN 3
-
-        WHEN market = 'HOME'
-             AND odds_band = '1.80-2.09' THEN 4
-
-        WHEN market = 'HOME'
-             AND odds_band = '2.10-2.49' THEN 5
-
-        WHEN market = 'HOME'
-             AND odds_band = '2.50-2.99' THEN 6
-
-        WHEN market = 'HOME'
-             AND odds_band = '3.00-3.99' THEN 7
-
-        WHEN market = 'HOME'
-             AND odds_band = '>= 4.00' THEN 8
-
-
-        /* DRAW */
-        WHEN market = 'DRAW'
-             AND odds_band = '< 1.30' THEN 1
-
-        WHEN market = 'DRAW'
-             AND odds_band = '1.30-1.49' THEN 2
-
-        WHEN market = 'DRAW'
-             AND odds_band = '1.50-1.79' THEN 3
-
-        WHEN market = 'DRAW'
-             AND odds_band = '1.80-2.09' THEN 4
-
-        WHEN market = 'DRAW'
-             AND odds_band = '2.10-2.49' THEN 5
-
-        WHEN market = 'DRAW'
-             AND odds_band = '2.50-2.99' THEN 6
-
-        WHEN market = 'DRAW'
-             AND odds_band = '3.00-3.99' THEN 7
-
-        WHEN market = 'DRAW'
-             AND odds_band = '>= 4.00' THEN 8
-
-
-        /* AWAY */
-        WHEN market = 'AWAY'
-             AND odds_band = '< 1.30' THEN 1
-
-        WHEN market = 'AWAY'
-             AND odds_band = '1.30-1.49' THEN 2
-
-        WHEN market = 'AWAY'
-             AND odds_band = '1.50-1.79' THEN 3
-
-        WHEN market = 'AWAY'
-             AND odds_band = '1.80-2.09' THEN 4
-
-        WHEN market = 'AWAY'
-             AND odds_band = '2.10-2.49' THEN 5
-
-        WHEN market = 'AWAY'
-             AND odds_band = '2.50-2.99' THEN 6
-
-        WHEN market = 'AWAY'
-             AND odds_band = '3.00-3.99' THEN 7
-
-        WHEN market = 'AWAY'
-             AND odds_band = '>= 4.00' THEN 8
-
-        ELSE 0
-
-    END
 
 TYPE ENDPOINT
