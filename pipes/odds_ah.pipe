@@ -1,0 +1,601 @@
+DESCRIPTION >
+  Asian Handicap oran analizi.
+
+  Tek endpoint / tek node.
+  Kaynak: betexplorer_matches.
+
+  Bölümler:
+  - GENERAL
+  - ODDS_BAND
+  - CUSTOM
+
+  Parametreler:
+  - ah_line      : -1.5 / -2.5 / -3.5
+  - side         : HOME / AWAY
+  - country      : opsiyonel
+  - league       : opsiyonel
+  - season       : opsiyonel
+  - odds_min     : opsiyonel
+  - odds_max     : opsiyonel
+
+  has_odds parametre değildir.
+  SQL içinde sabit olarak:
+    has_odds = 'True'
+
+  GENERAL:
+  - Seçilen AH line için standart oran bantlarını döndürür.
+  - HOME seçilirse ah_home,
+    AWAY seçilirse ah_away kullanılır.
+  - Her bantta:
+      matches
+      percentage
+      avg_ah_odds
+      min_odds
+      max_odds
+
+  AH -1.5 bantları:
+  - <1.20
+  - 1.20-1.39
+  - 1.40-1.59
+  - 1.60-1.79
+  - 1.80-1.99
+  - 2.00-2.19
+  - 2.20-2.39
+  - 2.40-2.59
+  - 2.60-2.79
+  - 2.80-2.99
+  - 3.00-3.49
+  - 3.50-3.99
+  - 4.00-4.99
+  - 5.00-5.99
+  - 6.00-7.99
+  - 8.00-9.99
+  - 10.00-14.99
+  - >=15
+
+  AH -2.5 bantları:
+  - <1.20
+  - 1.20-1.39
+  - 1.40-1.59
+  - 1.60-1.79
+  - 1.80-1.99
+  - 2.00-2.39
+  - 2.40-2.99
+  - 3.00-3.99
+  - 4.00-4.99
+  - 5.00-5.99
+  - 6.00-7.99
+  - 8.00-9.99
+  - >=10
+
+  AH -3.5 bantları:
+  - <1.20
+  - 1.20-1.39
+  - 1.40-1.59
+  - 1.60-1.79
+  - 1.80-1.99
+  - 2.00-2.39
+  - 2.40-2.99
+  - 3.00-3.99
+  - 4.00-5.99
+  - 6.00-9.99
+  - >=10
+
+NODE odds_ah_query
+SQL >
+%
+
+/* ============================================================
+   GENERAL
+   ============================================================ */
+
+SELECT
+    'GENERAL' AS section,
+    upper({{String(side)}}) AS side,
+    toString({{Float64(ah_line)}}) AS ah_line,
+    'ALL' AS odds_band,
+    toUInt16(0) AS band_order,
+
+    count() AS matches,
+
+    round(avg(ah_odds), 2) AS avg_ah_odds,
+
+    min(ah_odds) AS min_odds,
+    max(ah_odds) AS max_odds,
+
+    toFloat64(100) AS percentage,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM
+(
+    SELECT
+        if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+        ) AS ah_odds
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+
+      AND ah_line IS NOT NULL
+      AND ah_line = {{Float64(ah_line)}}
+
+      AND if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+          ) IS NOT NULL
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+)
+
+
+UNION ALL
+
+
+/* ============================================================
+   STANDARD ODDS BANDS
+   ============================================================ */
+
+SELECT
+    'ODDS_BAND' AS section,
+    upper({{String(side)}}) AS side,
+    toString({{Float64(ah_line)}}) AS ah_line,
+
+    odds_band,
+    band_order,
+
+    count() AS matches,
+
+    round(avg(ah_odds), 2) AS avg_ah_odds,
+
+    min(ah_odds) AS min_odds,
+    max(ah_odds) AS max_odds,
+
+    round(
+        count() * 100.0 / totals.total,
+        2
+    ) AS percentage,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM
+(
+    SELECT
+        if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+        ) AS ah_odds,
+
+        multiIf(
+
+            /* ==================================================
+               -1.5
+               ================================================== */
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 1.20,
+                '<1.20',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 1.40,
+                '1.20-1.39',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 1.60,
+                '1.40-1.59',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 1.80,
+                '1.60-1.79',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 2.00,
+                '1.80-1.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 2.20,
+                '2.00-2.19',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 2.40,
+                '2.20-2.39',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 2.60,
+                '2.40-2.59',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 2.80,
+                '2.60-2.79',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 3.00,
+                '2.80-2.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 3.50,
+                '3.00-3.49',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 4.00,
+                '3.50-3.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 5.00,
+                '4.00-4.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 6.00,
+                '5.00-5.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 8.00,
+                '6.00-7.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 10.00,
+                '8.00-9.99',
+
+            {{Float64(ah_line)}} = -1.5
+            AND ah_odds < 15.00,
+                '10.00-14.99',
+
+            {{Float64(ah_line)}} = -1.5,
+                '>=15',
+
+
+            /* ==================================================
+               -2.5
+               ================================================== */
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 1.20,
+                '<1.20',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 1.40,
+                '1.20-1.39',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 1.60,
+                '1.40-1.59',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 1.80,
+                '1.60-1.79',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 2.00,
+                '1.80-1.99',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 2.40,
+                '2.00-2.39',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 3.00,
+                '2.40-2.99',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 4.00,
+                '3.00-3.99',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 5.00,
+                '4.00-4.99',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 6.00,
+                '5.00-5.99',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 8.00,
+                '6.00-7.99',
+
+            {{Float64(ah_line)}} = -2.5
+            AND ah_odds < 10.00,
+                '8.00-9.99',
+
+            {{Float64(ah_line)}} = -2.5,
+                '>=10',
+
+
+            /* ==================================================
+               -3.5
+               ================================================== */
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 1.20,
+                '<1.20',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 1.40,
+                '1.20-1.39',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 1.60,
+                '1.40-1.59',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 1.80,
+                '1.60-1.79',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 2.00,
+                '1.80-1.99',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 2.40,
+                '2.00-2.39',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 3.00,
+                '2.40-2.99',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 4.00,
+                '3.00-3.99',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 6.00,
+                '4.00-5.99',
+
+            {{Float64(ah_line)}} = -3.5
+            AND ah_odds < 10.00,
+                '6.00-9.99',
+
+            {{Float64(ah_line)}} = -3.5,
+                '>=10',
+
+            'OTHER'
+
+        ) AS odds_band
+
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+
+      AND ah_line IS NOT NULL
+      AND ah_line = {{Float64(ah_line)}}
+
+      AND if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+          ) IS NOT NULL
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+) AS data
+
+CROSS JOIN
+(
+    SELECT
+        count() AS total
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+
+      AND ah_line IS NOT NULL
+      AND ah_line = {{Float64(ah_line)}}
+
+      AND if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+          ) IS NOT NULL
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+) AS totals
+
+GROUP BY
+    odds_band,
+    totals.total
+
+ORDER BY
+    multiIf(
+
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '<1.20', 1,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '1.20-1.39', 2,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '1.40-1.59', 3,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '1.60-1.79', 4,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '1.80-1.99', 5,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '2.00-2.19', 6,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '2.20-2.39', 7,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '2.40-2.59', 8,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '2.60-2.79', 9,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '2.80-2.99', 10,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '3.00-3.49', 11,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '3.50-3.99', 12,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '4.00-4.99', 13,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '5.00-5.99', 14,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '6.00-7.99', 15,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '8.00-9.99', 16,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '10.00-14.99', 17,
+        {{Float64(ah_line)}} = -1.5 AND odds_band = '>=15', 18,
+
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '<1.20', 1,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '1.20-1.39', 2,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '1.40-1.59', 3,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '1.60-1.79', 4,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '1.80-1.99', 5,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '2.00-2.39', 6,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '2.40-2.99', 7,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '3.00-3.99', 8,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '4.00-4.99', 9,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '5.00-5.99', 10,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '6.00-7.99', 11,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '8.00-9.99', 12,
+        {{Float64(ah_line)}} = -2.5 AND odds_band = '>=10', 13,
+
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '<1.20', 1,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '1.20-1.39', 2,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '1.40-1.59', 3,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '1.60-1.79', 4,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '1.80-1.99', 5,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '2.00-2.39', 6,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '2.40-2.99', 7,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '3.00-3.99', 8,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '4.00-5.99', 9,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '6.00-9.99', 10,
+        {{Float64(ah_line)}} = -3.5 AND odds_band = '>=10', 11,
+
+        99
+    )
+
+
+/* ============================================================
+   CUSTOM - MANUEL ORAN ARALIGI
+   ============================================================ */
+
+{% if defined(odds_min) %}
+{% if defined(odds_max) %}
+
+UNION ALL
+
+SELECT
+    'CUSTOM' AS section,
+    upper({{String(side)}}) AS side,
+    toString({{Float64(ah_line)}}) AS ah_line,
+    'CUSTOM_RANGE' AS odds_band,
+    toUInt16(0) AS band_order,
+
+    count() AS matches,
+
+    round(avg(ah_odds), 2) AS avg_ah_odds,
+
+    min(ah_odds) AS min_odds,
+    max(ah_odds) AS max_odds,
+
+    round(count() * 100.0 / totals.total, 2) AS percentage,
+
+    {{Float64(odds_min)}} AS range_min,
+    {{Float64(odds_max)}} AS range_max
+
+FROM
+(
+    SELECT
+        if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+        ) AS ah_odds
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+
+      AND ah_line IS NOT NULL
+      AND ah_line = {{Float64(ah_line)}}
+
+      AND if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+          ) IS NOT NULL
+
+      AND if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+          )
+          BETWEEN
+              {{Float64(odds_min)}}
+              AND
+              {{Float64(odds_max)}}
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+) AS custom_data
+
+CROSS JOIN
+(
+    SELECT
+        count() AS total
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+
+      AND ah_line IS NOT NULL
+      AND ah_line = {{Float64(ah_line)}}
+
+      AND if(
+            upper({{String(side)}}) = 'HOME',
+            ah_home,
+            ah_away
+          ) IS NOT NULL
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+) AS totals
+
+GROUP BY
+    totals.total
+
+{% end %}
+{% end %}
+
+
+TYPE ENDPOINT
