@@ -1,0 +1,579 @@
+DESCRIPTION >
+  O/U ORAN ANALİZİ
+
+  Kaynak:
+  betexplorer_matches
+
+  Çizgiler:
+  - 1.5
+  - 2.5
+  - 3.5
+  - 4.5
+
+  Her çizgide:
+  - OVER oran bantları
+  - UNDER oran bantları
+  - Oran bandındaki maç sayısı
+  - Gerçek OVER sayısı
+  - Gerçek UNDER sayısı
+  - OVER yüzdesi
+  - UNDER yüzdesi
+  - Ortalama oran
+
+  Parametreler:
+  country
+  league
+  season
+  line
+  market
+  range_min
+  range_max
+
+
+NODE odds_ou_query
+SQL >
+%
+
+WITH normalized AS
+(
+    SELECT
+        1.5 AS line,
+        'OVER' AS market,
+        ou1_5_over AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou1_5_over)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        1.5 AS line,
+        'UNDER' AS market,
+        ou1_5_under AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou1_5_under)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        2.5 AS line,
+        'OVER' AS market,
+        ou2_5_over AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou2_5_over)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        2.5 AS line,
+        'UNDER' AS market,
+        ou2_5_under AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou2_5_under)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        3.5 AS line,
+        'OVER' AS market,
+        ou3_5_over AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou3_5_over)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        3.5 AS line,
+        'UNDER' AS market,
+        ou3_5_under AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou3_5_under)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        4.5 AS line,
+        'OVER' AS market,
+        ou4_5_over AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou4_5_over)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    SELECT
+        4.5 AS line,
+        'UNDER' AS market,
+        ou4_5_under AS odds,
+        ft_total_goals
+    FROM betexplorer_matches
+    WHERE has_odds = 'True'
+      AND isNotNull(ou4_5_under)
+      AND isNotNull(ft_total_goals)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+)
+
+
+SELECT
+    'ODDS_BAND' AS section,
+
+    line,
+
+    market,
+
+    CASE
+
+        /* =====================================================
+           OVER 1.5
+           ===================================================== */
+
+        WHEN line = 1.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.30 THEN '1.20-1.29'
+                WHEN odds < 1.40 THEN '1.30-1.39'
+                WHEN odds < 1.50 THEN '1.40-1.49'
+                WHEN odds < 1.60 THEN '1.50-1.59'
+                WHEN odds < 1.70 THEN '1.60-1.69'
+                WHEN odds < 1.80 THEN '1.70-1.79'
+                WHEN odds < 1.90 THEN '1.80-1.89'
+                WHEN odds < 2.10 THEN '1.90-2.09'
+                ELSE '>= 2.10'
+            END
+
+        /* =====================================================
+           UNDER 1.5
+           ===================================================== */
+
+        WHEN line = 1.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.80 THEN '< 1.80'
+                WHEN odds < 1.90 THEN '1.80-1.89'
+                WHEN odds < 2.10 THEN '1.90-2.09'
+                WHEN odds < 2.40 THEN '2.10-2.39'
+                WHEN odds < 2.70 THEN '2.40-2.69'
+                WHEN odds < 3.00 THEN '2.70-2.99'
+                WHEN odds < 3.50 THEN '3.00-3.49'
+                WHEN odds < 4.00 THEN '3.50-3.99'
+                ELSE '>= 4.00'
+            END
+
+        /* =====================================================
+           OVER 2.5
+           ===================================================== */
+
+        WHEN line = 2.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.30 THEN '1.20-1.29'
+                WHEN odds < 1.40 THEN '1.30-1.39'
+                WHEN odds < 1.50 THEN '1.40-1.49'
+                WHEN odds < 1.60 THEN '1.50-1.59'
+                WHEN odds < 1.70 THEN '1.60-1.69'
+                WHEN odds < 1.80 THEN '1.70-1.79'
+                WHEN odds < 1.90 THEN '1.80-1.89'
+                WHEN odds < 2.10 THEN '1.90-2.09'
+                WHEN odds < 2.40 THEN '2.10-2.39'
+                WHEN odds < 2.70 THEN '2.40-2.69'
+                WHEN odds < 3.00 THEN '2.70-2.99'
+                WHEN odds < 3.50 THEN '3.00-3.49'
+                WHEN odds < 4.00 THEN '3.50-3.99'
+                ELSE '>= 4.00'
+            END
+
+        /* =====================================================
+           UNDER 2.5
+           ===================================================== */
+
+        WHEN line = 2.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.30 THEN '1.20-1.29'
+                WHEN odds < 1.40 THEN '1.30-1.39'
+                WHEN odds < 1.60 THEN '1.40-1.59'
+                WHEN odds < 1.70 THEN '1.60-1.69'
+                WHEN odds < 1.80 THEN '1.70-1.79'
+                WHEN odds < 1.90 THEN '1.80-1.89'
+                WHEN odds < 2.10 THEN '1.90-2.09'
+                WHEN odds < 2.40 THEN '2.10-2.39'
+                WHEN odds < 2.70 THEN '2.40-2.69'
+                WHEN odds < 3.00 THEN '2.70-2.99'
+                WHEN odds < 3.50 THEN '3.00-3.49'
+                WHEN odds < 4.00 THEN '3.50-3.99'
+                ELSE '>= 4.00'
+            END
+
+        /* =====================================================
+           OVER 3.5
+           ===================================================== */
+
+        WHEN line = 3.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 1.60 THEN '< 1.60'
+                WHEN odds < 1.70 THEN '1.60-1.69'
+                WHEN odds < 1.80 THEN '1.70-1.79'
+                WHEN odds < 1.90 THEN '1.80-1.89'
+                WHEN odds < 2.10 THEN '1.90-2.09'
+                WHEN odds < 2.40 THEN '2.10-2.39'
+                WHEN odds < 2.70 THEN '2.40-2.69'
+                WHEN odds < 3.00 THEN '2.70-2.99'
+                WHEN odds < 3.50 THEN '3.00-3.49'
+                WHEN odds < 4.00 THEN '3.50-3.99'
+                ELSE '>= 4.00'
+            END
+
+        /* =====================================================
+           UNDER 3.5
+           ===================================================== */
+
+        WHEN line = 3.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.30 THEN '1.20-1.29'
+                WHEN odds < 1.40 THEN '1.30-1.39'
+                WHEN odds < 1.50 THEN '1.40-1.49'
+                WHEN odds < 1.60 THEN '1.50-1.59'
+                WHEN odds < 1.70 THEN '1.60-1.69'
+                WHEN odds < 1.80 THEN '1.70-1.79'
+                WHEN odds < 1.90 THEN '1.80-1.89'
+                WHEN odds < 2.10 THEN '1.90-2.09'
+                ELSE '>= 2.10'
+            END
+
+        /* =====================================================
+           OVER 4.5
+           ===================================================== */
+
+        WHEN line = 4.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 2.40 THEN '< 2.40'
+                WHEN odds < 2.70 THEN '2.40-2.69'
+                WHEN odds < 3.00 THEN '2.70-2.99'
+                WHEN odds < 3.50 THEN '3.00-3.49'
+                WHEN odds < 4.00 THEN '3.50-3.99'
+                ELSE '>= 4.00'
+            END
+
+        /* =====================================================
+           UNDER 4.5
+           ===================================================== */
+
+        WHEN line = 4.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.30 THEN '1.20-1.29'
+                WHEN odds < 1.40 THEN '1.30-1.39'
+                WHEN odds < 1.50 THEN '1.40-1.49'
+                WHEN odds < 1.60 THEN '1.50-1.59'
+                ELSE '>= 1.60'
+            END
+
+        ELSE 'UNKNOWN'
+    END AS odds_band,
+
+
+    /* =========================================================
+       BAND ORDER
+       ========================================================= */
+
+    CASE
+
+        WHEN line = 1.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.30 THEN 2
+                WHEN odds < 1.40 THEN 3
+                WHEN odds < 1.50 THEN 4
+                WHEN odds < 1.60 THEN 5
+                WHEN odds < 1.70 THEN 6
+                WHEN odds < 1.80 THEN 7
+                WHEN odds < 1.90 THEN 8
+                WHEN odds < 2.10 THEN 9
+                ELSE 10
+            END
+
+        WHEN line = 1.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.80 THEN 1
+                WHEN odds < 1.90 THEN 2
+                WHEN odds < 2.10 THEN 3
+                WHEN odds < 2.40 THEN 4
+                WHEN odds < 2.70 THEN 5
+                WHEN odds < 3.00 THEN 6
+                WHEN odds < 3.50 THEN 7
+                WHEN odds < 4.00 THEN 8
+                ELSE 9
+            END
+
+        WHEN line = 2.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.30 THEN 2
+                WHEN odds < 1.40 THEN 3
+                WHEN odds < 1.50 THEN 4
+                WHEN odds < 1.60 THEN 5
+                WHEN odds < 1.70 THEN 6
+                WHEN odds < 1.80 THEN 7
+                WHEN odds < 1.90 THEN 8
+                WHEN odds < 2.10 THEN 9
+                WHEN odds < 2.40 THEN 10
+                WHEN odds < 2.70 THEN 11
+                WHEN odds < 3.00 THEN 12
+                WHEN odds < 3.50 THEN 13
+                WHEN odds < 4.00 THEN 14
+                ELSE 15
+            END
+
+        WHEN line = 2.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.30 THEN 2
+                WHEN odds < 1.40 THEN 3
+                WHEN odds < 1.60 THEN 4
+                WHEN odds < 1.70 THEN 5
+                WHEN odds < 1.80 THEN 6
+                WHEN odds < 1.90 THEN 7
+                WHEN odds < 2.10 THEN 8
+                WHEN odds < 2.40 THEN 9
+                WHEN odds < 2.70 THEN 10
+                WHEN odds < 3.00 THEN 11
+                WHEN odds < 3.50 THEN 12
+                WHEN odds < 4.00 THEN 13
+                ELSE 14
+            END
+
+        WHEN line = 3.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 1.60 THEN 1
+                WHEN odds < 1.70 THEN 2
+                WHEN odds < 1.80 THEN 3
+                WHEN odds < 1.90 THEN 4
+                WHEN odds < 2.10 THEN 5
+                WHEN odds < 2.40 THEN 6
+                WHEN odds < 2.70 THEN 7
+                WHEN odds < 3.00 THEN 8
+                WHEN odds < 3.50 THEN 9
+                WHEN odds < 4.00 THEN 10
+                ELSE 11
+            END
+
+        WHEN line = 3.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.30 THEN 2
+                WHEN odds < 1.40 THEN 3
+                WHEN odds < 1.50 THEN 4
+                WHEN odds < 1.60 THEN 5
+                WHEN odds < 1.70 THEN 6
+                WHEN odds < 1.80 THEN 7
+                WHEN odds < 1.90 THEN 8
+                WHEN odds < 2.10 THEN 9
+                ELSE 10
+            END
+
+        WHEN line = 4.5 AND market = 'OVER' THEN
+            CASE
+                WHEN odds < 2.40 THEN 1
+                WHEN odds < 2.70 THEN 2
+                WHEN odds < 3.00 THEN 3
+                WHEN odds < 3.50 THEN 4
+                WHEN odds < 4.00 THEN 5
+                ELSE 6
+            END
+
+        WHEN line = 4.5 AND market = 'UNDER' THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.30 THEN 2
+                WHEN odds < 1.40 THEN 3
+                WHEN odds < 1.50 THEN 4
+                WHEN odds < 1.60 THEN 5
+                ELSE 6
+            END
+
+        ELSE 0
+    END AS band_order,
+
+
+    count() AS matches,
+
+    countIf(ft_total_goals > line) AS over_count,
+
+    countIf(ft_total_goals < line) AS under_count,
+
+    round(
+        countIf(ft_total_goals > line) * 100.0 / count(),
+        2
+    ) AS over_pct,
+
+    round(
+        countIf(ft_total_goals < line) * 100.0 / count(),
+        2
+    ) AS under_pct,
+
+    round(avg(odds), 2) AS avg_odds,
+
+    toFloat64(0) AS range_min,
+
+    toFloat64(0) AS range_max
+
+FROM normalized
+
+WHERE 1 = 1
+
+{% if defined(line) %}
+  AND line = {{Float64(line)}}
+{% end %}
+
+{% if defined(market) %}
+  AND market = upper({{String(market)}})
+{% end %}
+
+{% if defined(range_min) %}
+  AND odds >= {{Float64(range_min)}}
+{% end %}
+
+{% if defined(range_max) %}
+  AND odds <= {{Float64(range_max)}}
+{% end %}
+
+GROUP BY
+    line,
+    market,
+    odds_band,
+    band_order
+
+ORDER BY
+    line,
+    market,
+    band_order
+
+TYPE ENDPOINT
