@@ -3,7 +3,7 @@ DESCRIPTION >
   has_odds=True olan maçları temel alır ancak her marketin
   kullanılabilirliğini kendi oran kolonlarına göre ayrı hesaplar.
 
-NODE odds_overview
+NODE odds_overview_query
 SQL >
 %
   SELECT
