@@ -270,9 +270,9 @@ SELECT
         WHEN away_odds < 2.50 THEN '2.10-2.49'
         WHEN away_odds < 3.00 THEN '2.50-2.99'
         WHEN away_odds < 4.00 THEN '3.00-3.99'
-        WHEN home_odds < 4.50 THEN '4.00-4.49'
-        WHEN home_odds < 5.00 THEN '4.50-4.99'
-        WHEN home_odds < 6.00 THEN '5.00-5.99'
+        WHEN away_odds < 4.50 THEN '4.00-4.49'
+        WHEN away_odds < 5.00 THEN '4.50-4.99'
+        WHEN away_odds < 6.00 THEN '5.00-5.99'
         ELSE '>= 6.00'
     END AS odds_band,
 
@@ -284,9 +284,9 @@ SELECT
         WHEN away_odds < 2.50 THEN 5
         WHEN away_odds < 3.00 THEN 6
         WHEN away_odds < 4.00 THEN 7
-        WHEN home_odds < 4.50 THEN 8
-        WHEN home_odds < 5.00 THEN 9
-        WHEN home_odds < 6.00 THEN 10
+        WHEN away_odds < 4.50 THEN 8
+        WHEN away_odds < 5.00 THEN 9
+        WHEN away_odds < 6.00 THEN 10
         ELSE 11
     END AS band_order,
 
