@@ -148,13 +148,14 @@ SELECT
     'DRAW' AS market,
 
     CASE
-        WHEN draw_odds < 2.50 THEN '< 2.50'
+        WHEN draw_odds < 1.30 THEN '< 1.30'
+        WHEN draw_odds < 1.50 THEN '1.30-1.49'
+        WHEN draw_odds < 1.80 THEN '1.50-1.79'
+        WHEN draw_odds < 2.10 THEN '1.80-2.09'
+        WHEN draw_odds < 2.50 THEN '2.10-2.49'
         WHEN draw_odds < 3.00 THEN '2.50-2.99'
-        WHEN draw_odds < 3.50 THEN '3.00-3.49'
-        WHEN draw_odds < 4.00 THEN '3.50-3.99'
-        WHEN draw_odds < 4.50 THEN '4.00-4.49'
-        WHEN draw_odds < 5.00 THEN '4.50-4.99'
-        ELSE '>= 5.00'
+        WHEN draw_odds < 4.00 THEN '3.00-3.99'
+        ELSE '>= 4.00'
     END AS odds_band,
 
     count() AS matches,
@@ -208,7 +209,8 @@ SELECT
     'AWAY' AS market,
 
     CASE
-        WHEN away_odds < 1.50 THEN '< 1.50'
+        WHEN away_odds < 1.30 THEN '< 1.30'
+        WHEN away_odds < 1.50 THEN '1.30-1.49'
         WHEN away_odds < 1.80 THEN '1.50-1.79'
         WHEN away_odds < 2.10 THEN '1.80-2.09'
         WHEN away_odds < 2.50 THEN '2.10-2.49'
@@ -461,6 +463,7 @@ ORDER BY
 
     CASE
 
+        /* HOME */
         WHEN market = 'HOME'
              AND odds_band = '< 1.30' THEN 1
 
@@ -486,48 +489,56 @@ ORDER BY
              AND odds_band = '>= 4.00' THEN 8
 
 
+        /* DRAW */
         WHEN market = 'DRAW'
-             AND odds_band = '< 2.50' THEN 1
-
-        WHEN market = 'DRAW'
-             AND odds_band = '2.50-2.99' THEN 2
+             AND odds_band = '< 1.30' THEN 1
 
         WHEN market = 'DRAW'
-             AND odds_band = '3.00-3.49' THEN 3
+             AND odds_band = '1.30-1.49' THEN 2
 
         WHEN market = 'DRAW'
-             AND odds_band = '3.50-3.99' THEN 4
+             AND odds_band = '1.50-1.79' THEN 3
 
         WHEN market = 'DRAW'
-             AND odds_band = '4.00-4.49' THEN 5
+             AND odds_band = '1.80-2.09' THEN 4
 
         WHEN market = 'DRAW'
-             AND odds_band = '4.50-4.99' THEN 6
+             AND odds_band = '2.10-2.49' THEN 5
 
         WHEN market = 'DRAW'
-             AND odds_band = '>= 5.00' THEN 7
+             AND odds_band = '2.50-2.99' THEN 6
 
+        WHEN market = 'DRAW'
+             AND odds_band = '3.00-3.99' THEN 7
+
+        WHEN market = 'DRAW'
+             AND odds_band = '>= 4.00' THEN 8
+
+
+        /* AWAY */
+        WHEN market = 'AWAY'
+             AND odds_band = '< 1.30' THEN 1
 
         WHEN market = 'AWAY'
-             AND odds_band = '< 1.50' THEN 1
+             AND odds_band = '1.30-1.49' THEN 2
 
         WHEN market = 'AWAY'
-             AND odds_band = '1.50-1.79' THEN 2
+             AND odds_band = '1.50-1.79' THEN 3
 
         WHEN market = 'AWAY'
-             AND odds_band = '1.80-2.09' THEN 3
+             AND odds_band = '1.80-2.09' THEN 4
 
         WHEN market = 'AWAY'
-             AND odds_band = '2.10-2.49' THEN 4
+             AND odds_band = '2.10-2.49' THEN 5
 
         WHEN market = 'AWAY'
-             AND odds_band = '2.50-2.99' THEN 5
+             AND odds_band = '2.50-2.99' THEN 6
 
         WHEN market = 'AWAY'
-             AND odds_band = '3.00-3.99' THEN 6
+             AND odds_band = '3.00-3.99' THEN 7
 
         WHEN market = 'AWAY'
-             AND odds_band = '>= 4.00' THEN 7
+             AND odds_band = '>= 4.00' THEN 8
 
         ELSE 0
 
