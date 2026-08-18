@@ -4,7 +4,7 @@ DESCRIPTION >
   has_odds sadece genel odds varlığını gösterir.
   Her market kendi kolonlarının NULL durumuna göre ayrıca hesaplanır.
 
-NODE odds_overview
+NODE odds_overview_query
 SQL >
 
 %
