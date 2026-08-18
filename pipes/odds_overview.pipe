@@ -3,7 +3,7 @@ DESCRIPTION >
   has_odds=True olan maçlar odds kapsamının temelini oluşturur.
   Her market ayrıca kendi kolonlarının doluluk durumuna göre hesaplanır.
 
-NODE odds_overview
+NODE odds_overview_query
 SQL >
 %
   SELECT
