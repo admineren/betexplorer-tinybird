@@ -1,0 +1,445 @@
+DESCRIPTION >
+  BTTS oran analizi.
+
+  Tek endpoint / tek node.
+  Kaynak: betexplorer_matches.
+
+  Bölümler:
+  - GENERAL
+  - ODDS_BAND: BTTS YES
+  - ODDS_BAND: BTTS NO
+  - CUSTOM: BTTS YES + BTTS NO manuel oran araligi
+
+  BTTS sonucunun belirlenmesi:
+  - ft_home > 0 AND ft_away > 0 = YES
+  - aksi durumda = NO
+
+  ODDS_BAND:
+  - BTTS YES ve BTTS NO oranlari ayri ayri analiz edilir.
+  - Her bantta mac sayisi tutulur.
+  - Her bantta gercek BTTS YES / NO adetleri ve yuzdeleri hesaplanir.
+
+  CUSTOM:
+  - btts_yes_min
+  - btts_yes_max
+  - btts_no_min
+  - btts_no_max
+
+  Dört parametre birlikte verildiginde ayni macin
+  hem BTTS YES hem BTTS NO oran araligina girmesi gerekir.
+
+
+NODE odds_btts_query
+
+SQL >
+%
+/* ============================================================
+   GENERAL
+   ============================================================ */
+
+SELECT
+    'GENERAL' AS section,
+    'ALL' AS market,
+    'ALL' AS odds_band,
+
+    toUInt8(0) AS band_order,
+
+    count() AS matches,
+
+    countIf(
+        btts_yes IS NOT NULL
+        AND btts_no IS NOT NULL
+    ) AS full_btts_matches,
+
+    round(avg(btts_yes), 2) AS avg_btts_yes,
+    round(avg(btts_no), 2) AS avg_btts_no,
+
+    countIf(
+        ft_home > 0
+        AND ft_away > 0
+    ) AS btts_yes_count,
+
+    countIf(
+        ft_home = 0
+        OR ft_away = 0
+    ) AS btts_no_count,
+
+    round(
+        countIf(
+            ft_home > 0
+            AND ft_away > 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_yes_pct,
+
+    round(
+        countIf(
+            ft_home = 0
+            OR ft_away = 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_no_pct,
+
+    toFloat64(0) AS btts_yes_min,
+    toFloat64(0) AS btts_yes_max,
+    toFloat64(0) AS btts_no_min,
+    toFloat64(0) AS btts_no_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+
+  AND isNotNull(btts_yes)
+  AND isNotNull(btts_no)
+
+  AND isNotNull(ft_home)
+  AND isNotNull(ft_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+
+/* ============================================================
+   BTTS YES ODDS
+   ============================================================ */
+
+UNION ALL
+
+SELECT
+    'ODDS_BAND' AS section,
+    'BTTS_YES' AS market,
+
+    CASE
+        WHEN btts_yes < 1.20 THEN '< 1.20'
+        WHEN btts_yes < 1.30 THEN '1.20-1.29'
+        WHEN btts_yes < 1.40 THEN '1.30-1.39'
+        WHEN btts_yes < 1.50 THEN '1.40-1.49'
+        WHEN btts_yes < 1.60 THEN '1.50-1.59'
+        WHEN btts_yes < 1.70 THEN '1.60-1.69'
+        WHEN btts_yes < 1.80 THEN '1.70-1.79'
+        WHEN btts_yes < 1.90 THEN '1.80-1.89'
+        WHEN btts_yes < 2.10 THEN '1.90-2.09'
+        WHEN btts_yes < 2.40 THEN '2.10-2.39'
+        WHEN btts_yes < 2.70 THEN '2.40-2.69'
+        WHEN btts_yes < 3.00 THEN '2.70-2.99'
+        ELSE '>= 3.00'
+    END AS odds_band,
+
+    CASE
+        WHEN btts_yes < 1.20 THEN 1
+        WHEN btts_yes < 1.30 THEN 2
+        WHEN btts_yes < 1.40 THEN 3
+        WHEN btts_yes < 1.50 THEN 4
+        WHEN btts_yes < 1.60 THEN 5
+        WHEN btts_yes < 1.70 THEN 6
+        WHEN btts_yes < 1.80 THEN 7
+        WHEN btts_yes < 1.90 THEN 8
+        WHEN btts_yes < 2.10 THEN 9
+        WHEN btts_yes < 2.40 THEN 10
+        WHEN btts_yes < 2.70 THEN 11
+        WHEN btts_yes < 3.00 THEN 12
+        ELSE 13
+    END AS band_order,
+
+    count() AS matches,
+
+    count() AS full_btts_matches,
+
+    round(avg(btts_yes), 2) AS avg_btts_yes,
+    round(avg(btts_no), 2) AS avg_btts_no,
+
+    countIf(
+        ft_home > 0
+        AND ft_away > 0
+    ) AS btts_yes_count,
+
+    countIf(
+        ft_home = 0
+        OR ft_away = 0
+    ) AS btts_no_count,
+
+    round(
+        countIf(
+            ft_home > 0
+            AND ft_away > 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_yes_pct,
+
+    round(
+        countIf(
+            ft_home = 0
+            OR ft_away = 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_no_pct,
+
+    toFloat64(0) AS btts_yes_min,
+    toFloat64(0) AS btts_yes_max,
+    toFloat64(0) AS btts_no_min,
+    toFloat64(0) AS btts_no_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+
+  AND isNotNull(btts_yes)
+  AND isNotNull(btts_no)
+
+  AND isNotNull(ft_home)
+  AND isNotNull(ft_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+/* ============================================================
+   BTTS NO ODDS
+   ============================================================ */
+
+UNION ALL
+
+SELECT
+    'ODDS_BAND' AS section,
+    'BTTS_NO' AS market,
+
+    CASE
+        WHEN btts_no < 1.20 THEN '< 1.20'
+        WHEN btts_no < 1.30 THEN '1.20-1.29'
+        WHEN btts_no < 1.40 THEN '1.30-1.39'
+        WHEN btts_no < 1.50 THEN '1.40-1.49'
+        WHEN btts_no < 1.60 THEN '1.50-1.59'
+        WHEN btts_no < 1.70 THEN '1.60-1.69'
+        WHEN btts_no < 1.80 THEN '1.70-1.79'
+        WHEN btts_no < 1.90 THEN '1.80-1.89'
+        WHEN btts_no < 2.10 THEN '1.90-2.09'
+        WHEN btts_no < 2.40 THEN '2.10-2.39'
+        WHEN btts_no < 2.70 THEN '2.40-2.69'
+        WHEN btts_no < 3.00 THEN '2.70-2.99'
+        ELSE '>= 3.00'
+    END AS odds_band,
+
+    CASE
+        WHEN btts_no < 1.20 THEN 1
+        WHEN btts_no < 1.30 THEN 2
+        WHEN btts_no < 1.40 THEN 3
+        WHEN btts_no < 1.50 THEN 4
+        WHEN btts_no < 1.60 THEN 5
+        WHEN btts_no < 1.70 THEN 6
+        WHEN btts_no < 1.80 THEN 7
+        WHEN btts_no < 1.90 THEN 8
+        WHEN btts_no < 2.10 THEN 9
+        WHEN btts_no < 2.40 THEN 10
+        WHEN btts_no < 2.70 THEN 11
+        WHEN btts_no < 3.00 THEN 12
+        ELSE 13
+    END AS band_order,
+
+    count() AS matches,
+
+    count() AS full_btts_matches,
+
+    round(avg(btts_yes), 2) AS avg_btts_yes,
+    round(avg(btts_no), 2) AS avg_btts_no,
+
+    countIf(
+        ft_home > 0
+        AND ft_away > 0
+    ) AS btts_yes_count,
+
+    countIf(
+        ft_home = 0
+        OR ft_away = 0
+    ) AS btts_no_count,
+
+    round(
+        countIf(
+            ft_home > 0
+            AND ft_away > 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_yes_pct,
+
+    round(
+        countIf(
+            ft_home = 0
+            OR ft_away = 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_no_pct,
+
+    toFloat64(0) AS btts_yes_min,
+    toFloat64(0) AS btts_yes_max,
+    toFloat64(0) AS btts_no_min,
+    toFloat64(0) AS btts_no_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+
+  AND isNotNull(btts_yes)
+  AND isNotNull(btts_no)
+
+  AND isNotNull(ft_home)
+  AND isNotNull(ft_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+/* ============================================================
+   CUSTOM
+   BTTS YES + BTTS NO
+   ============================================================ */
+
+{% if defined(btts_yes_min) %}
+{% if defined(btts_yes_max) %}
+{% if defined(btts_no_min) %}
+{% if defined(btts_no_max) %}
+
+UNION ALL
+
+SELECT
+    'CUSTOM' AS section,
+
+    'BTTS_BOTH' AS market,
+
+    'CUSTOM_RANGE' AS odds_band,
+
+    toUInt8(0) AS band_order,
+
+    count() AS matches,
+
+    count() AS full_btts_matches,
+
+    round(avg(btts_yes), 2) AS avg_btts_yes,
+    round(avg(btts_no), 2) AS avg_btts_no,
+
+    countIf(
+        ft_home > 0
+        AND ft_away > 0
+    ) AS btts_yes_count,
+
+    countIf(
+        ft_home = 0
+        OR ft_away = 0
+    ) AS btts_no_count,
+
+    round(
+        countIf(
+            ft_home > 0
+            AND ft_away > 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_yes_pct,
+
+    round(
+        countIf(
+            ft_home = 0
+            OR ft_away = 0
+        ) * 100.0 / count(),
+        2
+    ) AS btts_no_pct,
+
+    {{Float64(btts_yes_min)}} AS btts_yes_min,
+    {{Float64(btts_yes_max)}} AS btts_yes_max,
+    {{Float64(btts_no_min)}} AS btts_no_min,
+    {{Float64(btts_no_max)}} AS btts_no_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+
+  AND isNotNull(btts_yes)
+  AND isNotNull(btts_no)
+
+  AND isNotNull(ft_home)
+  AND isNotNull(ft_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+  AND btts_yes BETWEEN
+      {{Float64(btts_yes_min)}}
+      AND
+      {{Float64(btts_yes_max)}}
+
+  AND btts_no BETWEEN
+      {{Float64(btts_no_min)}}
+      AND
+      {{Float64(btts_no_max)}}
+
+{% end %}
+{% end %}
+{% end %}
+{% end %}
+
+
+/* ============================================================
+   SIRALAMA
+   ============================================================ */
+
+ORDER BY
+
+    CASE
+        WHEN section = 'GENERAL' THEN 0
+        WHEN section = 'ODDS_BAND' THEN 1
+        WHEN section = 'CUSTOM' THEN 2
+        ELSE 9
+    END,
+
+    CASE
+        WHEN market = 'ALL' THEN 0
+        WHEN market = 'BTTS_YES' THEN 1
+        WHEN market = 'BTTS_NO' THEN 2
+        WHEN market = 'BTTS_BOTH' THEN 3
+        ELSE 9
+    END,
+
+    band_order
+
+TYPE ENDPOINT
