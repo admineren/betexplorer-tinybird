@@ -1,48 +1,36 @@
 DESCRIPTION >
     1X2 ORAN ANALİZİ
 
-    Genel:
-    - 1X2 oranlı maç sayısı
+    GENEL
+    - Oranlı maç sayısı
+    - Tam 1X2 oranı bulunan maç sayısı
     - Home / Draw / Away ortalama oran
-    - Home / Draw / Away gerçekleşme oranı
+    - Gerçekleşen H / D / A dağılımı
 
-    Home:
-    - Oran dağılımı
-    - Oran bandı -> H/D/A sonucu
+    HOME ODDS
+    - Sabit oran bantları
+    - Her bant için H / D / A sonuçları
+    - Yüzdesel dağılım
 
-    Draw:
-    - Oran dağılımı
-    - Oran bandı -> H/D/A sonucu
+    DRAW ODDS
+    - Sabit oran bantları
+    - Her bant için H / D / A sonuçları
+    - Yüzdesel dağılım
 
-    Away:
-    - Oran dağılımı
-    - Oran bandı -> H/D/A sonucu
+    AWAY ODDS
+    - Sabit oran bantları
+    - Her bant için H / D / A sonuçları
+    - Yüzdesel dağılım
 
-    Favoriler:
-    - Home favori
-    - Draw favori
-    - Away favori
-    - Favori sonucu
-
-    Sürpriz:
-    - >=3
-    - >=4
-    - >=5
-    - >=7
-
-    Kullanıcı özel oran:
+    ÖZEL ORAN SORGUSU
     - market = home / draw / away
     - target_odds
     - tolerance
+    - Eşleşen maç sayısı
+    - H / D / A sonuçları
+    - İsteğe bağlı maç detayları
 
-    Örnek:
-    market=home
-    target_odds=1.25
-    tolerance=0.10
-
-    => 1.15 - 1.35 aralığındaki Home oranlarını analiz eder.
-
-    Filtre:
+    FİLTRELER
     - country
     - league
     - season
@@ -53,81 +41,81 @@ SQL >
 
     %
 
-    WITH filtered AS
-    (
-        SELECT
-            match_id,
-            date,
-            country,
-            league,
-            season,
-            home_team,
-            away_team,
-            result,
+    SELECT
+        match_id,
+        date,
+        country,
+        league,
+        season,
+        home_team,
+        away_team,
+        result,
 
-            toFloat64OrNull(home_odds) AS home_odds,
-            toFloat64OrNull(draw_odds) AS draw_odds,
-            toFloat64OrNull(away_odds) AS away_odds
+        toFloat64(home_odds) AS home_odds,
+        toFloat64(draw_odds) AS draw_odds,
+        toFloat64(away_odds) AS away_odds
 
-        FROM betexplorer_matches
+    FROM betexplorer_matches
 
-        WHERE
-            has_odds = 'True'
+    WHERE
+        has_odds = 'True'
 
-            AND isNotNull(home_odds)
-            AND isNotNull(draw_odds)
-            AND isNotNull(away_odds)
+        AND isNotNull(home_odds)
+        AND isNotNull(draw_odds)
+        AND isNotNull(away_odds)
 
-            {% if defined(country) %}
-            AND country = {{String(country)}}
-            {% end %}
+        {% if defined(country) %}
+        AND country = {{String(country)}}
+        {% end %}
 
-            {% if defined(league) %}
-            AND league = {{String(league)}}
-            {% end %}
+        {% if defined(league) %}
+        AND league = {{String(league)}}
+        {% end %}
 
-            {% if defined(season) %}
-            AND season = {{String(season)}}
-            {% end %}
-    ),
+        {% if defined(season) %}
+        AND season = {{String(season)}}
+        {% end %}
 
-    prepared AS
-    (
-        SELECT
-            *,
 
-            least(
-                home_odds,
-                draw_odds,
-                away_odds
-            ) AS favorite_odds,
-
-            multiIf(
-                home_odds = least(
-                    home_odds,
-                    draw_odds,
-                    away_odds
-                ), 'H',
-
-                draw_odds = least(
-                    home_odds,
-                    draw_odds,
-                    away_odds
-                ), 'D',
-
-                'A'
-            ) AS favorite_type
-
-        FROM filtered
-    )
+NODE general_summary
+SQL >
 
     SELECT
 
-        /* =====================================================
-           GENEL
-           ===================================================== */
+        'general' AS row_type,
+
+        '' AS market,
+
+        'GENEL' AS band,
+
+        toUInt8(0) AS band_order,
 
         count() AS matches,
+
+        count() AS odds_matches,
+
+        count() AS complete_1x2_matches,
+
+        countIf(result = 'H') AS home_wins,
+
+        countIf(result = 'D') AS draws,
+
+        countIf(result = 'A') AS away_wins,
+
+        round(
+            countIf(result = 'H') * 100.0 / count(),
+            2
+        ) AS home_pct,
+
+        round(
+            countIf(result = 'D') * 100.0 / count(),
+            2
+        ) AS draw_pct,
+
+        round(
+            countIf(result = 'A') * 100.0 / count(),
+            2
+        ) AS away_pct,
 
         round(avg(home_odds), 2)
             AS home_odds_avg,
@@ -138,21 +126,222 @@ SQL >
         round(avg(away_odds), 2)
             AS away_odds_avg,
 
+        toFloat64(0) AS target_odds,
 
-        countIf(result = 'H')
-            AS home_wins,
+        toFloat64(0) AS tolerance,
 
-        countIf(result = 'D')
-            AS draws,
+        toFloat64(0) AS range_min,
 
-        countIf(result = 'A')
-            AS away_wins,
+        toFloat64(0) AS range_max,
 
+        '' AS match_id,
+
+        toDate('1970-01-01') AS date,
+
+        '' AS home_team,
+
+        '' AS away_team,
+
+        toFloat64(0) AS home_odds,
+
+        toFloat64(0) AS draw_odds,
+
+        toFloat64(0) AS away_odds,
+
+        '' AS result
+
+    FROM filtered_odds
+
+
+NODE band_rows
+SQL >
+
+    SELECT
+
+        'band' AS row_type,
+
+        'home' AS market,
+
+        multiIf(
+
+            home_odds < 1.30,
+            '< 1.30',
+
+            home_odds < 1.50,
+            '1.30-1.49',
+
+            home_odds < 1.80,
+            '1.50-1.79',
+
+            home_odds < 2.10,
+            '1.80-2.09',
+
+            home_odds < 2.50,
+            '2.10-2.49',
+
+            home_odds < 3.00,
+            '2.50-2.99',
+
+            home_odds < 4.00,
+            '3.00-3.99',
+
+            '>= 4.00'
+
+        ) AS band,
+
+        multiIf(
+
+            home_odds < 1.30, 1,
+            home_odds < 1.50, 2,
+            home_odds < 1.80, 3,
+            home_odds < 2.10, 4,
+            home_odds < 2.50, 5,
+            home_odds < 3.00, 6,
+            home_odds < 4.00, 7,
+            8
+
+        ) AS band_order,
+
+        toFloat64(home_odds) AS selected_odds,
+
+        result
+
+    FROM filtered_odds
+
+
+    UNION ALL
+
+
+    SELECT
+
+        'band' AS row_type,
+
+        'draw' AS market,
+
+        multiIf(
+
+            draw_odds < 2.50,
+            '< 2.50',
+
+            draw_odds < 3.00,
+            '2.50-2.99',
+
+            draw_odds < 3.50,
+            '3.00-3.49',
+
+            draw_odds < 4.00,
+            '3.50-3.99',
+
+            draw_odds < 4.50,
+            '4.00-4.49',
+
+            draw_odds < 5.00,
+            '4.50-4.99',
+
+            '>= 5.00'
+
+        ) AS band,
+
+        multiIf(
+
+            draw_odds < 2.50, 1,
+            draw_odds < 3.00, 2,
+            draw_odds < 3.50, 3,
+            draw_odds < 4.00, 4,
+            draw_odds < 4.50, 5,
+            draw_odds < 5.00, 6,
+            7
+
+        ) AS band_order,
+
+        toFloat64(draw_odds) AS selected_odds,
+
+        result
+
+    FROM filtered_odds
+
+
+    UNION ALL
+
+
+    SELECT
+
+        'band' AS row_type,
+
+        'away' AS market,
+
+        multiIf(
+
+            away_odds < 1.50,
+            '< 1.50',
+
+            away_odds < 1.80,
+            '1.50-1.79',
+
+            away_odds < 2.10,
+            '1.80-2.09',
+
+            away_odds < 2.50,
+            '2.10-2.49',
+
+            away_odds < 3.00,
+            '2.50-2.99',
+
+            away_odds < 4.00,
+            '3.00-3.99',
+
+            '>= 4.00'
+
+        ) AS band,
+
+        multiIf(
+
+            away_odds < 1.50, 1,
+            away_odds < 1.80, 2,
+            away_odds < 2.10, 3,
+            away_odds < 2.50, 4,
+            away_odds < 3.00, 5,
+            away_odds < 4.00, 6,
+            7
+
+        ) AS band_order,
+
+        toFloat64(away_odds) AS selected_odds,
+
+        result
+
+    FROM filtered_odds
+
+
+NODE band_summary
+SQL >
+
+    SELECT
+
+        'band' AS row_type,
+
+        market,
+
+        band,
+
+        band_order,
+
+        count() AS matches,
+
+        toUInt64(0) AS odds_matches,
+
+        toUInt64(0) AS complete_1x2_matches,
+
+        countIf(result = 'H') AS home_wins,
+
+        countIf(result = 'D') AS draws,
+
+        countIf(result = 'A') AS away_wins,
 
         round(
             countIf(result = 'H') * 100.0 / count(),
             2
-        ) AS home_win_pct,
+        ) AS home_pct,
 
         round(
             countIf(result = 'D') * 100.0 / count(),
@@ -162,649 +351,307 @@ SQL >
         round(
             countIf(result = 'A') * 100.0 / count(),
             2
-        ) AS away_win_pct,
+        ) AS away_pct,
 
+        toFloat64(0) AS home_odds_avg,
 
-        /* =====================================================
-           HOME ORAN DAĞILIMI
-           ===================================================== */
+        toFloat64(0) AS draw_odds_avg,
 
-        countIf(home_odds < 1.30)
-            AS home_lt_1_30,
+        toFloat64(0) AS away_odds_avg,
 
-        countIf(
-            home_odds >= 1.30
-            AND home_odds < 1.50
-        ) AS home_1_30_1_49,
+        toFloat64(0) AS target_odds,
 
-        countIf(
-            home_odds >= 1.50
-            AND home_odds < 1.80
-        ) AS home_1_50_1_79,
+        toFloat64(0) AS tolerance,
 
-        countIf(
-            home_odds >= 1.80
-            AND home_odds < 2.10
-        ) AS home_1_80_2_09,
+        min(selected_odds) AS range_min,
 
-        countIf(
-            home_odds >= 2.10
-            AND home_odds < 2.50
-        ) AS home_2_10_2_49,
+        max(selected_odds) AS range_max,
 
-        countIf(
-            home_odds >= 2.50
-            AND home_odds < 3.00
-        ) AS home_2_50_2_99,
+        '' AS match_id,
 
-        countIf(
-            home_odds >= 3.00
-            AND home_odds < 4.00
-        ) AS home_3_00_3_99,
+        toDate('1970-01-01') AS date,
 
-        countIf(
-            home_odds >= 4.00
-            AND home_odds < 5.00
-        ) AS home_4_00_4_99,
+        '' AS home_team,
 
-        countIf(
-            home_odds >= 5.00
-            AND home_odds < 7.00
-        ) AS home_5_00_6_99,
+        '' AS away_team,
 
-        countIf(home_odds >= 7.00)
-            AS home_ge_7_00,
+        toFloat64(0) AS home_odds,
 
+        toFloat64(0) AS draw_odds,
 
-        /* =====================================================
-           HOME ORAN -> SONUÇ
-           ===================================================== */
+        toFloat64(0) AS away_odds,
 
-        countIf(
-            home_odds < 1.30
-            AND result = 'H'
-        ) AS home_lt_1_30_H,
+        '' AS result
 
-        countIf(
-            home_odds < 1.30
-            AND result = 'D'
-        ) AS home_lt_1_30_D,
+    FROM band_rows
 
-        countIf(
-            home_odds < 1.30
-            AND result = 'A'
-        ) AS home_lt_1_30_A,
+    GROUP BY
+        market,
+        band,
+        band_order
 
 
-        countIf(
-            home_odds >= 1.30
-            AND home_odds < 1.50
-            AND result = 'H'
-        ) AS home_1_30_1_49_H,
+NODE custom_summary
+SQL >
 
-        countIf(
-            home_odds >= 1.30
-            AND home_odds < 1.50
-            AND result = 'D'
-        ) AS home_1_30_1_49_D,
+    %
 
-        countIf(
-            home_odds >= 1.30
-            AND home_odds < 1.50
-            AND result = 'A'
-        ) AS home_1_30_1_49_A,
+    SELECT
 
+        'custom_summary' AS row_type,
 
-        countIf(
-            home_odds >= 1.50
-            AND home_odds < 1.80
-            AND result = 'H'
-        ) AS home_1_50_1_79_H,
+        {{String(market, 'home')}} AS market,
 
-        countIf(
-            home_odds >= 1.50
-            AND home_odds < 1.80
-            AND result = 'D'
-        ) AS home_1_50_1_79_D,
+        concat(
+            toString(round({{Float64(target_odds)}}, 2)),
+            ' ± ',
+            toString(round({{Float64(tolerance)}}, 2))
+        ) AS band,
 
-        countIf(
-            home_odds >= 1.50
-            AND home_odds < 1.80
-            AND result = 'A'
-        ) AS home_1_50_1_79_A,
+        toUInt8(0) AS band_order,
 
+        count() AS matches,
 
-        countIf(
-            home_odds >= 1.80
-            AND home_odds < 2.10
-            AND result = 'H'
-        ) AS home_1_80_2_09_H,
+        toUInt64(0) AS odds_matches,
 
-        countIf(
-            home_odds >= 1.80
-            AND home_odds < 2.10
-            AND result = 'D'
-        ) AS home_1_80_2_09_D,
+        toUInt64(0) AS complete_1x2_matches,
 
-        countIf(
-            home_odds >= 1.80
-            AND home_odds < 2.10
-            AND result = 'A'
-        ) AS home_1_80_2_09_A,
+        countIf(result = 'H') AS home_wins,
 
+        countIf(result = 'D') AS draws,
 
-        countIf(
-            home_odds >= 2.10
-            AND home_odds < 2.50
-            AND result = 'H'
-        ) AS home_2_10_2_49_H,
-
-        countIf(
-            home_odds >= 2.10
-            AND home_odds < 2.50
-            AND result = 'D'
-        ) AS home_2_10_2_49_D,
-
-        countIf(
-            home_odds >= 2.10
-            AND home_odds < 2.50
-            AND result = 'A'
-        ) AS home_2_10_2_49_A,
-
-
-        countIf(
-            home_odds >= 2.50
-            AND home_odds < 3.00
-            AND result = 'H'
-        ) AS home_2_50_2_99_H,
-
-        countIf(
-            home_odds >= 2.50
-            AND home_odds < 3.00
-            AND result = 'D'
-        ) AS home_2_50_2_99_D,
-
-        countIf(
-            home_odds >= 2.50
-            AND home_odds < 3.00
-            AND result = 'A'
-        ) AS home_2_50_2_99_A,
-
-
-        countIf(
-            home_odds >= 3.00
-            AND home_odds < 4.00
-            AND result = 'H'
-        ) AS home_3_00_3_99_H,
-
-        countIf(
-            home_odds >= 3.00
-            AND home_odds < 4.00
-            AND result = 'D'
-        ) AS home_3_00_3_99_D,
-
-        countIf(
-            home_odds >= 3.00
-            AND home_odds < 4.00
-            AND result = 'A'
-        ) AS home_3_00_3_99_A,
-
-
-        /* =====================================================
-           DRAW ORAN DAĞILIMI
-           ===================================================== */
-
-        countIf(draw_odds < 2.50)
-            AS draw_lt_2_50,
-
-        countIf(
-            draw_odds >= 2.50
-            AND draw_odds < 3.00
-        ) AS draw_2_50_2_99,
-
-        countIf(
-            draw_odds >= 3.00
-            AND draw_odds < 3.50
-        ) AS draw_3_00_3_49,
-
-        countIf(
-            draw_odds >= 3.50
-            AND draw_odds < 4.00
-        ) AS draw_3_50_3_99,
-
-        countIf(
-            draw_odds >= 4.00
-            AND draw_odds < 4.50
-        ) AS draw_4_00_4_49,
-
-        countIf(draw_odds >= 4.50)
-            AS draw_ge_4_50,
-
-
-        /* =====================================================
-           DRAW -> SONUÇ
-           ===================================================== */
-
-        countIf(
-            draw_odds < 2.50
-            AND result = 'D'
-        ) AS draw_lt_2_50_D,
-
-        countIf(
-            draw_odds >= 2.50
-            AND draw_odds < 3.00
-            AND result = 'D'
-        ) AS draw_2_50_2_99_D,
-
-        countIf(
-            draw_odds >= 3.00
-            AND draw_odds < 3.50
-            AND result = 'D'
-        ) AS draw_3_00_3_49_D,
-
-        countIf(
-            draw_odds >= 3.50
-            AND draw_odds < 4.00
-            AND result = 'D'
-        ) AS draw_3_50_3_99_D,
-
-        countIf(
-            draw_odds >= 4.00
-            AND draw_odds < 4.50
-            AND result = 'D'
-        ) AS draw_4_00_4_49_D,
-
-        countIf(
-            draw_odds >= 4.50
-            AND result = 'D'
-        ) AS draw_ge_4_50_D,
-
-
-        /* =====================================================
-           AWAY ORAN DAĞILIMI
-           ===================================================== */
-
-        countIf(away_odds < 1.30)
-            AS away_lt_1_30,
-
-        countIf(
-            away_odds >= 1.30
-            AND away_odds < 1.50
-        ) AS away_1_30_1_49,
-
-        countIf(
-            away_odds >= 1.50
-            AND away_odds < 1.80
-        ) AS away_1_50_1_79,
-
-        countIf(
-            away_odds >= 1.80
-            AND away_odds < 2.10
-        ) AS away_1_80_2_09,
-
-        countIf(
-            away_odds >= 2.10
-            AND away_odds < 2.50
-        ) AS away_2_10_2_49,
-
-        countIf(
-            away_odds >= 2.50
-            AND away_odds < 3.00
-        ) AS away_2_50_2_99,
-
-        countIf(
-            away_odds >= 3.00
-            AND away_odds < 4.00
-        ) AS away_3_00_3_99,
-
-        countIf(
-            away_odds >= 4.00
-            AND away_odds < 5.00
-        ) AS away_4_00_4_99,
-
-        countIf(
-            away_odds >= 5.00
-            AND away_odds < 7.00
-        ) AS away_5_00_6_99,
-
-        countIf(away_odds >= 7.00)
-            AS away_ge_7_00,
-
-
-        /* =====================================================
-           AWAY -> SONUÇ
-           ===================================================== */
-
-        countIf(
-            away_odds < 1.30
-            AND result = 'A'
-        ) AS away_lt_1_30_A,
-
-        countIf(
-            away_odds < 1.30
-            AND result = 'D'
-        ) AS away_lt_1_30_D,
-
-        countIf(
-            away_odds < 1.30
-            AND result = 'H'
-        ) AS away_lt_1_30_H,
-
-
-        countIf(
-            away_odds >= 1.30
-            AND away_odds < 1.50
-            AND result = 'A'
-        ) AS away_1_30_1_49_A,
-
-        countIf(
-            away_odds >= 1.30
-            AND away_odds < 1.50
-            AND result = 'D'
-        ) AS away_1_30_1_49_D,
-
-        countIf(
-            away_odds >= 1.30
-            AND away_odds < 1.50
-            AND result = 'H'
-        ) AS away_1_30_1_49_H,
-
-
-        countIf(
-            away_odds >= 1.50
-            AND away_odds < 1.80
-            AND result = 'A'
-        ) AS away_1_50_1_79_A,
-
-        countIf(
-            away_odds >= 1.50
-            AND away_odds < 1.80
-            AND result = 'D'
-        ) AS away_1_50_1_79_D,
-
-        countIf(
-            away_odds >= 1.50
-            AND away_odds < 1.80
-            AND result = 'H'
-        ) AS away_1_50_1_79_H,
-
-
-        countIf(
-            away_odds >= 1.80
-            AND away_odds < 2.10
-            AND result = 'A'
-        ) AS away_1_80_2_09_A,
-
-        countIf(
-            away_odds >= 1.80
-            AND away_odds < 2.10
-            AND result = 'D'
-        ) AS away_1_80_2_09_D,
-
-        countIf(
-            away_odds >= 1.80
-            AND away_odds < 2.10
-            AND result = 'H'
-        ) AS away_1_80_2_09_H,
-
-
-        /* =====================================================
-           FAVORİ
-           ===================================================== */
-
-        countIf(favorite_type = 'H')
-            AS home_favorite_matches,
-
-        countIf(
-            favorite_type = 'H'
-            AND result = 'H'
-        ) AS home_favorite_wins,
-
-        countIf(
-            favorite_type = 'H'
-            AND result = 'D'
-        ) AS home_favorite_draws,
-
-        countIf(
-            favorite_type = 'H'
-            AND result = 'A'
-        ) AS home_favorite_losses,
-
-
-        countIf(favorite_type = 'D')
-            AS draw_favorite_matches,
-
-        countIf(
-            favorite_type = 'D'
-            AND result = 'D'
-        ) AS draw_favorite_wins,
-
-
-        countIf(favorite_type = 'A')
-            AS away_favorite_matches,
-
-        countIf(
-            favorite_type = 'A'
-            AND result = 'A'
-        ) AS away_favorite_wins,
-
-        countIf(
-            favorite_type = 'A'
-            AND result = 'D'
-        ) AS away_favorite_draws,
-
-        countIf(
-            favorite_type = 'A'
-            AND result = 'H'
-        ) AS away_favorite_losses,
-
-
-        /* =====================================================
-           YÜKSEK ORAN GALİBİYETLERİ
-           ===================================================== */
-
-        countIf(
-            home_odds >= 3.00
-            AND result = 'H'
-        ) AS home_ge_3_wins,
-
-        countIf(
-            home_odds >= 4.00
-            AND result = 'H'
-        ) AS home_ge_4_wins,
-
-        countIf(
-            home_odds >= 5.00
-            AND result = 'H'
-        ) AS home_ge_5_wins,
-
-        countIf(
-            home_odds >= 7.00
-            AND result = 'H'
-        ) AS home_ge_7_wins,
-
-
-        countIf(
-            draw_odds >= 3.00
-            AND result = 'D'
-        ) AS draw_ge_3_results,
-
-        countIf(
-            draw_odds >= 4.00
-            AND result = 'D'
-        ) AS draw_ge_4_results,
-
-        countIf(
-            draw_odds >= 5.00
-            AND result = 'D'
-        ) AS draw_ge_5_results,
-
-        countIf(
-            draw_odds >= 7.00
-            AND result = 'D'
-        ) AS draw_ge_7_results,
-
-
-        countIf(
-            away_odds >= 3.00
-            AND result = 'A'
-        ) AS away_ge_3_wins,
-
-        countIf(
-            away_odds >= 4.00
-            AND result = 'A'
-        ) AS away_ge_4_wins,
-
-        countIf(
-            away_odds >= 5.00
-            AND result = 'A'
-        ) AS away_ge_5_wins,
-
-        countIf(
-            away_odds >= 7.00
-            AND result = 'A'
-        ) AS away_ge_7_wins,
-
-
-        /* =====================================================
-           SÜRPRİZ
-           ===================================================== */
-
-        countIf(
-            favorite_type = 'H'
-            AND result = 'A'
-        ) AS surprise_away_vs_home_favorite,
-
-        countIf(
-            favorite_type = 'A'
-            AND result = 'H'
-        ) AS surprise_home_vs_away_favorite,
-
-        countIf(
-            favorite_type = 'H'
-            AND result = 'D'
-        ) AS surprise_draw_vs_home_favorite,
-
-        countIf(
-            favorite_type = 'A'
-            AND result = 'D'
-        ) AS surprise_draw_vs_away_favorite,
-
-
-        /* =====================================================
-           KULLANICI ÖZEL ORAN SORGUSU
-           ===================================================== */
-
-        {% if defined(market) and defined(target_odds) and defined(tolerance) %}
-
-        {% if defined(market) and market == 'home' %}
-
-        countIf(
-            home_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND home_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-        ) AS custom_matches,
-
-        countIf(
-            home_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND home_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'H'
-        ) AS custom_H,
-
-        countIf(
-            home_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND home_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'D'
-        ) AS custom_D,
-
-        countIf(
-            home_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND home_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'A'
-        ) AS custom_A,
+        countIf(result = 'A') AS away_wins,
 
         round(
-            custom_H * 100.0 / nullIf(custom_matches, 0),
+            countIf(result = 'H') * 100.0 / count(),
             2
-        ) AS custom_H_pct,
+        ) AS home_pct,
 
         round(
-            custom_D * 100.0 / nullIf(custom_matches, 0),
+            countIf(result = 'D') * 100.0 / count(),
             2
-        ) AS custom_D_pct,
+        ) AS draw_pct,
 
         round(
-            custom_A * 100.0 / nullIf(custom_matches, 0),
+            countIf(result = 'A') * 100.0 / count(),
             2
-        ) AS custom_A_pct
+        ) AS away_pct,
 
-        {% end %}
+        toFloat64(0) AS home_odds_avg,
 
-        {% if defined(market) and market == 'draw' %}
+        toFloat64(0) AS draw_odds_avg,
 
-        countIf(
-            draw_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND draw_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-        ) AS custom_matches,
+        toFloat64(0) AS away_odds_avg,
 
-        countIf(
-            draw_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND draw_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'D'
-        ) AS custom_D,
+        {{Float64(target_odds)}} AS target_odds,
 
-        countIf(
-            draw_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND draw_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'H'
-        ) AS custom_H,
+        {{Float64(tolerance)}} AS tolerance,
 
-        countIf(
-            draw_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND draw_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'A'
-        ) AS custom_A,
+        {{Float64(target_odds)}} -
+            {{Float64(tolerance)}} AS range_min,
 
-        round(
-            custom_D * 100.0 / nullIf(custom_matches, 0),
-            2
-        ) AS custom_D_pct
+        {{Float64(target_odds)}} +
+            {{Float64(tolerance)}} AS range_max,
 
-        {% end %}
+        '' AS match_id,
 
-        {% if defined(market) and market == 'away' %}
+        toDate('1970-01-01') AS date,
 
-        countIf(
-            away_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND away_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-        ) AS custom_matches,
+        '' AS home_team,
 
-        countIf(
-            away_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND away_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'A'
-        ) AS custom_A,
+        '' AS away_team,
 
-        countIf(
-            away_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND away_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'H'
-        ) AS custom_H,
+        toFloat64(0) AS home_odds,
 
-        countIf(
-            away_odds >= {{Float64(target_odds)}} - {{Float64(tolerance)}}
-            AND away_odds <= {{Float64(target_odds)}} + {{Float64(tolerance)}}
-            AND result = 'D'
-        ) AS custom_D,
+        toFloat64(0) AS draw_odds,
 
-        round(
-            custom_A * 100.0 / nullIf(custom_matches, 0),
-            2
-        ) AS custom_A_pct
+        toFloat64(0) AS away_odds,
 
-        {% end %}
+        '' AS result
 
-        {% end %}
+    FROM filtered_odds
 
-    FROM prepared
+    WHERE
+
+        multiIf(
+
+            {{String(market, 'home')}} = 'home',
+            home_odds,
+
+            {{String(market, 'home')}} = 'draw',
+            draw_odds,
+
+            away_odds
+
+        )
+
+        BETWEEN
+
+            {{Float64(target_odds)}} -
+            {{Float64(tolerance)}}
+
+        AND
+
+            {{Float64(target_odds)}} +
+            {{Float64(tolerance)}}
+
+
+NODE custom_matches
+SQL >
+
+    %
+
+    SELECT
+
+        'custom_match' AS row_type,
+
+        {{String(market, 'home')}} AS market,
+
+        concat(
+            toString(round({{Float64(target_odds)}}, 2)),
+            ' ± ',
+            toString(round({{Float64(tolerance)}}, 2))
+        ) AS band,
+
+        toUInt8(0) AS band_order,
+
+        toUInt64(1) AS matches,
+
+        toUInt64(0) AS odds_matches,
+
+        toUInt64(0) AS complete_1x2_matches,
+
+        if(result = 'H', toUInt64(1), toUInt64(0))
+            AS home_wins,
+
+        if(result = 'D', toUInt64(1), toUInt64(0))
+            AS draws,
+
+        if(result = 'A', toUInt64(1), toUInt64(0))
+            AS away_wins,
+
+        if(result = 'H', 100.0, 0.0)
+            AS home_pct,
+
+        if(result = 'D', 100.0, 0.0)
+            AS draw_pct,
+
+        if(result = 'A', 100.0, 0.0)
+            AS away_pct,
+
+        toFloat64(0) AS home_odds_avg,
+
+        toFloat64(0) AS draw_odds_avg,
+
+        toFloat64(0) AS away_odds_avg,
+
+        {{Float64(target_odds)}} AS target_odds,
+
+        {{Float64(tolerance)}} AS tolerance,
+
+        {{Float64(target_odds)}} -
+            {{Float64(tolerance)}} AS range_min,
+
+        {{Float64(target_odds)}} +
+            {{Float64(tolerance)}} AS range_max,
+
+        match_id,
+
+        date,
+
+        home_team,
+
+        away_team,
+
+        home_odds,
+
+        draw_odds,
+
+        away_odds,
+
+        result
+
+    FROM filtered_odds
+
+    WHERE
+
+        multiIf(
+
+            {{String(market, 'home')}} = 'home',
+            home_odds,
+
+            {{String(market, 'home')}} = 'draw',
+            draw_odds,
+
+            away_odds
+
+        )
+
+        BETWEEN
+
+            {{Float64(target_odds)}} -
+            {{Float64(tolerance)}}
+
+        AND
+
+            {{Float64(target_odds)}} +
+            {{Float64(tolerance)}}
+
+    ORDER BY date DESC
+
+    LIMIT {{Int32(detail_limit, 100) }}
+
+
+NODE endpoint
+SQL >
+
+    %
+
+    {% if defined(market) %}
+    {% if market != 'home' and market != 'draw' and market != 'away' %}
+    {{error('market must be home, draw or away')}}
+    {% end %}
+    {% end %}
+
+    {% if defined(target_odds) and not defined(tolerance) %}
+    {{error('target_odds and tolerance must be provided together')}}
+    {% end %}
+
+    {% if defined(tolerance) and not defined(target_odds) %}
+    {{error('target_odds and tolerance must be provided together')}}
+    {% end %}
+
+    SELECT
+        *
+    FROM general_summary
+
+    UNION ALL
+
+    SELECT
+        *
+    FROM band_summary
+
+    {% if defined(target_odds) and defined(tolerance) %}
+
+    UNION ALL
+
+    SELECT
+        *
+    FROM custom_summary
+
+    UNION ALL
+
+    SELECT
+        *
+    FROM custom_matches
+
+    {% end %}
+
+    ORDER BY
+
+        row_type,
+        market,
+        band_order,
+        date DESC
 
 TYPE ENDPOINT
