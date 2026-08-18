@@ -1,9 +1,9 @@
 DESCRIPTION >
-  Odds verilerinin lig bazındaki genel kapsamını gösterir.
-  has_odds=True olan maçları temel alır ancak her marketin
-  kullanılabilirliğini kendi oran kolonlarına göre ayrı hesaplar.
+  Odds verilerinin lig ve sezon bazındaki kapsamını analiz eder.
+  has_odds=True olan maçlar odds kapsamının temelini oluşturur.
+  Her market ayrıca kendi kolonlarının doluluk durumuna göre hesaplanır.
 
-NODE odds_overview_query
+NODE odds_overview
 SQL >
 %
   SELECT
@@ -11,146 +11,161 @@ SQL >
     league,
     season,
 
+    /* =====================================================
+       GENEL
+       ===================================================== */
+
     count() AS total_matches,
 
-    countIf(toString(has_odds) = 'True') AS odds_matches,
+    countIf(has_odds = 'True') AS odds_matches,
 
     round(
-      countIf(toString(has_odds) = 'True') * 100.0 / count(),
+      countIf(has_odds = 'True') * 100.0 / count(),
       2
     ) AS odds_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        1X2
-       ========================= */
+       home_odds + draw_odds + away_odds
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND home_odds > 0
-      AND draw_odds > 0
-      AND away_odds > 0
+      has_odds = 'True'
+      AND isNotNull(home_odds)
+      AND isNotNull(draw_odds)
+      AND isNotNull(away_odds)
     ) AS x12_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND home_odds > 0
-        AND draw_odds > 0
-        AND away_odds > 0
+        has_odds = 'True'
+        AND isNotNull(home_odds)
+        AND isNotNull(draw_odds)
+        AND isNotNull(away_odds)
       ) * 100.0 / count(),
       2
     ) AS x12_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        OVER / UNDER 1.5
-       ========================= */
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND ou1.5_over > 0
-      AND ou1.5_under > 0
+      has_odds = 'True'
+      AND isNotNull(ou1_5_over)
+      AND isNotNull(ou1_5_under)
     ) AS ou1_5_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND ou1.5_over > 0
-        AND ou1.5_under > 0
+        has_odds = 'True'
+        AND isNotNull(ou1_5_over)
+        AND isNotNull(ou1_5_under)
       ) * 100.0 / count(),
       2
     ) AS ou1_5_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        OVER / UNDER 2.5
-       ========================= */
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND ou2.5_over > 0
-      AND ou2.5_under > 0
+      has_odds = 'True'
+      AND isNotNull(ou2_5_over)
+      AND isNotNull(ou2_5_under)
     ) AS ou2_5_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND ou2.5_over > 0
-        AND ou2.5_under > 0
+        has_odds = 'True'
+        AND isNotNull(ou2_5_over)
+        AND isNotNull(ou2_5_under)
       ) * 100.0 / count(),
       2
     ) AS ou2_5_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        OVER / UNDER 3.5
-       ========================= */
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND ou3.5_over > 0
-      AND ou3.5_under > 0
+      has_odds = 'True'
+      AND isNotNull(ou3_5_over)
+      AND isNotNull(ou3_5_under)
     ) AS ou3_5_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND ou3.5_over > 0
-        AND ou3.5_under > 0
+        has_odds = 'True'
+        AND isNotNull(ou3_5_over)
+        AND isNotNull(ou3_5_under)
       ) * 100.0 / count(),
       2
     ) AS ou3_5_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        OVER / UNDER 4.5
-       ========================= */
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND ou4.5_over > 0
-      AND ou4.5_under > 0
+      has_odds = 'True'
+      AND isNotNull(ou4_5_over)
+      AND isNotNull(ou4_5_under)
     ) AS ou4_5_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND ou4.5_over > 0
-        AND ou4.5_under > 0
+        has_odds = 'True'
+        AND isNotNull(ou4_5_over)
+        AND isNotNull(ou4_5_under)
       ) * 100.0 / count(),
       2
     ) AS ou4_5_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        BTTS
-       ========================= */
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND btts_yes > 0
-      AND btts_no > 0
+      has_odds = 'True'
+      AND isNotNull(btts_yes)
+      AND isNotNull(btts_no)
     ) AS btts_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND btts_yes > 0
-        AND btts_no > 0
+        has_odds = 'True'
+        AND isNotNull(btts_yes)
+        AND isNotNull(btts_no)
       ) * 100.0 / count(),
       2
     ) AS btts_coverage_pct,
 
-    /* =========================
+
+    /* =====================================================
        ASIAN HANDICAP
-       ========================= */
+       ah_line + ah_home + ah_away
+       ===================================================== */
 
     countIf(
-      toString(has_odds) = 'True'
-      AND ah_home > 0
-      AND ah_away > 0
+      has_odds = 'True'
+      AND isNotNull(ah_line)
+      AND isNotNull(ah_home)
+      AND isNotNull(ah_away)
     ) AS ah_matches,
 
     round(
       countIf(
-        toString(has_odds) = 'True'
-        AND ah_home > 0
-        AND ah_away > 0
+        has_odds = 'True'
+        AND isNotNull(ah_line)
+        AND isNotNull(ah_home)
+        AND isNotNull(ah_away)
       ) * 100.0 / count(),
       2
     ) AS ah_coverage_pct
