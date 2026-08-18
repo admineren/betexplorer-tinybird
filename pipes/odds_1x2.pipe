@@ -387,7 +387,7 @@ AND
     (
         lower({{String(market)}}) = 'home'
         AND home_odds BETWEEN
-            {{Float64(target_odds)}} - {{Float64(tolerance)}
+            {{Float64(target_odds)}} - {{Float64(tolerance)}}
             AND
             {{Float64(target_odds)}} + {{Float64(tolerance)}}
     )
