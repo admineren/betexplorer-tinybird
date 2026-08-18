@@ -1,12 +1,14 @@
 DESCRIPTION >
-  Odds verilerinin lig ve sezon bazındaki kapsamını analiz eder.
-  has_odds=True olan maçlar odds kapsamının temelini oluşturur.
-  Her market ayrıca kendi kolonlarının doluluk durumuna göre hesaplanır.
+  Lig ve sezon bazında odds kapsamını analiz eder.
+  country, league ve season parametreleri opsiyoneldir.
+  has_odds sadece genel odds varlığını gösterir.
+  Her market kendi kolonlarının NULL durumuna göre ayrıca hesaplanır.
 
-NODE odds_overview_query
+NODE odds_overview
 SQL >
+
 %
-  SELECT
+SELECT
     country,
     league,
     season,
@@ -20,31 +22,30 @@ SQL >
     countIf(has_odds = 'True') AS odds_matches,
 
     round(
-      countIf(has_odds = 'True') * 100.0 / count(),
-      2
+        countIf(has_odds = 'True') * 100.0 / count(),
+        2
     ) AS odds_coverage_pct,
 
 
     /* =====================================================
        1X2
-       home_odds + draw_odds + away_odds
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(home_odds)
-      AND isNotNull(draw_odds)
-      AND isNotNull(away_odds)
-    ) AS x12_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(home_odds)
         AND isNotNull(draw_odds)
         AND isNotNull(away_odds)
-      ) * 100.0 / count(),
-      2
+    ) AS x12_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(home_odds)
+            AND isNotNull(draw_odds)
+            AND isNotNull(away_odds)
+        ) * 100.0 / count(),
+        2
     ) AS x12_coverage_pct,
 
 
@@ -53,18 +54,18 @@ SQL >
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(ou1_5_over)
-      AND isNotNull(ou1_5_under)
-    ) AS ou1_5_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(ou1_5_over)
         AND isNotNull(ou1_5_under)
-      ) * 100.0 / count(),
-      2
+    ) AS ou1_5_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(ou1_5_over)
+            AND isNotNull(ou1_5_under)
+        ) * 100.0 / count(),
+        2
     ) AS ou1_5_coverage_pct,
 
 
@@ -73,18 +74,18 @@ SQL >
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(ou2_5_over)
-      AND isNotNull(ou2_5_under)
-    ) AS ou2_5_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(ou2_5_over)
         AND isNotNull(ou2_5_under)
-      ) * 100.0 / count(),
-      2
+    ) AS ou2_5_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(ou2_5_over)
+            AND isNotNull(ou2_5_under)
+        ) * 100.0 / count(),
+        2
     ) AS ou2_5_coverage_pct,
 
 
@@ -93,18 +94,18 @@ SQL >
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(ou3_5_over)
-      AND isNotNull(ou3_5_under)
-    ) AS ou3_5_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(ou3_5_over)
         AND isNotNull(ou3_5_under)
-      ) * 100.0 / count(),
-      2
+    ) AS ou3_5_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(ou3_5_over)
+            AND isNotNull(ou3_5_under)
+        ) * 100.0 / count(),
+        2
     ) AS ou3_5_coverage_pct,
 
 
@@ -113,18 +114,18 @@ SQL >
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(ou4_5_over)
-      AND isNotNull(ou4_5_under)
-    ) AS ou4_5_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(ou4_5_over)
         AND isNotNull(ou4_5_under)
-      ) * 100.0 / count(),
-      2
+    ) AS ou4_5_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(ou4_5_over)
+            AND isNotNull(ou4_5_under)
+        ) * 100.0 / count(),
+        2
     ) AS ou4_5_coverage_pct,
 
 
@@ -133,46 +134,59 @@ SQL >
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(btts_yes)
-      AND isNotNull(btts_no)
-    ) AS btts_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(btts_yes)
         AND isNotNull(btts_no)
-      ) * 100.0 / count(),
-      2
+    ) AS btts_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(btts_yes)
+            AND isNotNull(btts_no)
+        ) * 100.0 / count(),
+        2
     ) AS btts_coverage_pct,
 
 
     /* =====================================================
        ASIAN HANDICAP
-       ah_line + ah_home + ah_away
        ===================================================== */
 
     countIf(
-      has_odds = 'True'
-      AND isNotNull(ah_line)
-      AND isNotNull(ah_home)
-      AND isNotNull(ah_away)
-    ) AS ah_matches,
-
-    round(
-      countIf(
         has_odds = 'True'
         AND isNotNull(ah_line)
         AND isNotNull(ah_home)
         AND isNotNull(ah_away)
-      ) * 100.0 / count(),
-      2
+    ) AS ah_matches,
+
+    round(
+        countIf(
+            has_odds = 'True'
+            AND isNotNull(ah_line)
+            AND isNotNull(ah_home)
+            AND isNotNull(ah_away)
+        ) * 100.0 / count(),
+        2
     ) AS ah_coverage_pct
 
-  FROM betexplorer_matches
+FROM betexplorer_matches
 
-  GROUP BY
+WHERE 1 = 1
+
+{% if defined(country) %}
+AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+AND season = {{String(season)}}
+{% end %}
+
+GROUP BY
     country,
     league,
     season
