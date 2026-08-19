@@ -13,6 +13,23 @@ DESCRIPTION >
   - HOME
   - AWAY
 
+  HOME:
+  - -1.5
+  - -2.5
+  - -3.5
+
+  AWAY:
+  - +1.5
+  - +2.5
+  - +3.5
+
+  Sonuçlar:
+  - oran aralığı
+  - maç sayısı
+  - kazanan maç sayısı
+  - kaybeden maç sayısı
+  - kazanma yüzdesi
+
   Standart filtreler:
   - country
   - league
@@ -40,13 +57,17 @@ WITH normalized AS
     SELECT
         -1.5 AS line,
         'HOME' AS market,
-        toFloat64(ah_home) AS odds
+        toFloat64(ah_home) AS odds,
+        ft_home,
+        ft_away
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
       AND isNotNull(ah_home)
       AND isNotNull(ah_line)
+      AND isNotNull(ft_home)
+      AND isNotNull(ft_away)
       AND toFloat64(ah_line) = -1.5
 
 {% if defined(country) %}
@@ -72,13 +93,17 @@ WITH normalized AS
     SELECT
         -1.5 AS line,
         'AWAY' AS market,
-        toFloat64(ah_away) AS odds
+        toFloat64(ah_away) AS odds,
+        ft_home,
+        ft_away
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
       AND isNotNull(ah_away)
       AND isNotNull(ah_line)
+      AND isNotNull(ft_home)
+      AND isNotNull(ft_away)
       AND toFloat64(ah_line) = -1.5
 
 {% if defined(country) %}
@@ -104,13 +129,17 @@ WITH normalized AS
     SELECT
         -2.5 AS line,
         'HOME' AS market,
-        toFloat64(ah_home) AS odds
+        toFloat64(ah_home) AS odds,
+        ft_home,
+        ft_away
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
       AND isNotNull(ah_home)
       AND isNotNull(ah_line)
+      AND isNotNull(ft_home)
+      AND isNotNull(ft_away)
       AND toFloat64(ah_line) = -2.5
 
 {% if defined(country) %}
@@ -136,13 +165,17 @@ WITH normalized AS
     SELECT
         -2.5 AS line,
         'AWAY' AS market,
-        toFloat64(ah_away) AS odds
+        toFloat64(ah_away) AS odds,
+        ft_home,
+        ft_away
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
       AND isNotNull(ah_away)
       AND isNotNull(ah_line)
+      AND isNotNull(ft_home)
+      AND isNotNull(ft_away)
       AND toFloat64(ah_line) = -2.5
 
 {% if defined(country) %}
@@ -168,13 +201,17 @@ WITH normalized AS
     SELECT
         -3.5 AS line,
         'HOME' AS market,
-        toFloat64(ah_home) AS odds
+        toFloat64(ah_home) AS odds,
+        ft_home,
+        ft_away
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
       AND isNotNull(ah_home)
       AND isNotNull(ah_line)
+      AND isNotNull(ft_home)
+      AND isNotNull(ft_away)
       AND toFloat64(ah_line) = -3.5
 
 {% if defined(country) %}
@@ -200,13 +237,17 @@ WITH normalized AS
     SELECT
         -3.5 AS line,
         'AWAY' AS market,
-        toFloat64(ah_away) AS odds
+        toFloat64(ah_away) AS odds,
+        ft_home,
+        ft_away
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
       AND isNotNull(ah_away)
       AND isNotNull(ah_line)
+      AND isNotNull(ft_home)
+      AND isNotNull(ft_away)
       AND toFloat64(ah_line) = -3.5
 
 {% if defined(country) %}
@@ -224,7 +265,7 @@ WITH normalized AS
 
 
 /* ================================================================
-   BANDLAR
+   BANDLAR VE AH SONUCU
    ================================================================ */
 
 bands AS
@@ -236,6 +277,10 @@ bands AS
         market,
 
         odds,
+
+        ft_home,
+
+        ft_away,
 
 
         /* ========================================================
@@ -428,25 +473,68 @@ SELECT
 
     count() AS matches,
 
-    round(
-        count() * 100.0
-        /
-        sum(count()) OVER
+
+    /* ============================================================
+       KAZANAN MAÇLAR
+       ============================================================ */
+
+    countIf(
         (
-            PARTITION BY line, market
-        ),
+            market = 'HOME'
+            AND (ft_home - ft_away) > abs(line)
+        )
+        OR
+        (
+            market = 'AWAY'
+            AND (ft_away - ft_home) > -abs(line)
+        )
+    ) AS wins,
+
+
+    /* ============================================================
+       KAYBEDEN MAÇLAR
+       ============================================================ */
+
+    countIf(
+        NOT
+        (
+            (
+                market = 'HOME'
+                AND (ft_home - ft_away) > abs(line)
+            )
+            OR
+            (
+                market = 'AWAY'
+                AND (ft_away - ft_home) > -abs(line)
+            )
+        )
+    ) AS losses,
+
+
+    /* ============================================================
+       KAZANMA YÜZDESİ
+       ============================================================ */
+
+    round(
+        countIf(
+            (
+                market = 'HOME'
+                AND (ft_home - ft_away) > abs(line)
+            )
+            OR
+            (
+                market = 'AWAY'
+                AND (ft_away - ft_home) > -abs(line)
+            )
+        ) * 100.0 / count(),
         2
-    ) AS percentage,
+    ) AS win_percentage,
 
-    round(avg(odds), 2) AS avg_odds,
-
-    min(odds) AS min_odds,
-
-    max(odds) AS max_odds,
 
     toFloat64(0) AS range_min,
 
     toFloat64(0) AS range_max
+
 
 FROM bands
 
