@@ -12,21 +12,17 @@ DESCRIPTION >
   Her çizgide:
   - HOME
   - AWAY
-  - Oran bandı
-  - Maç sayısı
-  - Yüzde
-  - Ortalama oran
-  - Minimum oran
-  - Maksimum oran
 
-  Parametreler:
-  country
-  league
-  season
-  ah_line
-  market
-  range_min
-  range_max
+  Standart filtreler:
+  - country
+  - league
+  - season
+
+  Manuel filtreler:
+  - ah_line
+  - market
+  - range_min
+  - range_max
 
   has_odds = 'True' SQL içinde sabittir.
 
@@ -224,11 +220,198 @@ WITH normalized AS
 {% if defined(season) %}
       AND season = {{String(season)}}
 {% end %}
+),
+
+
+/* ================================================================
+   BANDLAR
+   ================================================================ */
+
+bands AS
+(
+    SELECT
+
+        line,
+
+        market,
+
+        odds,
+
+
+        /* ========================================================
+           MARKET ORDER
+           ======================================================== */
+
+        CASE
+            WHEN market = 'HOME' THEN 1
+            WHEN market = 'AWAY' THEN 2
+            ELSE 3
+        END AS market_order,
+
+
+        /* ========================================================
+           ODDS BAND
+           ======================================================== */
+
+        CASE
+
+            /* ----------------------------------------------------
+               -1.5
+               ---------------------------------------------------- */
+
+            WHEN line = -1.5 THEN
+                CASE
+                    WHEN odds < 1.20 THEN '< 1.20'
+                    WHEN odds < 1.40 THEN '1.20-1.39'
+                    WHEN odds < 1.60 THEN '1.40-1.59'
+                    WHEN odds < 1.80 THEN '1.60-1.79'
+                    WHEN odds < 2.00 THEN '1.80-1.99'
+                    WHEN odds < 2.20 THEN '2.00-2.19'
+                    WHEN odds < 2.40 THEN '2.20-2.39'
+                    WHEN odds < 2.60 THEN '2.40-2.59'
+                    WHEN odds < 2.80 THEN '2.60-2.79'
+                    WHEN odds < 3.00 THEN '2.80-2.99'
+                    WHEN odds < 3.50 THEN '3.00-3.49'
+                    WHEN odds < 4.00 THEN '3.50-3.99'
+                    WHEN odds < 5.00 THEN '4.00-4.99'
+                    WHEN odds < 6.00 THEN '5.00-5.99'
+                    WHEN odds < 8.00 THEN '6.00-7.99'
+                    WHEN odds < 10.00 THEN '8.00-9.99'
+                    WHEN odds < 15.00 THEN '10.00-14.99'
+                    ELSE '>= 15'
+                END
+
+
+            /* ----------------------------------------------------
+               -2.5
+               ---------------------------------------------------- */
+
+            WHEN line = -2.5 THEN
+                CASE
+                    WHEN odds < 1.20 THEN '< 1.20'
+                    WHEN odds < 1.40 THEN '1.20-1.39'
+                    WHEN odds < 1.60 THEN '1.40-1.59'
+                    WHEN odds < 1.80 THEN '1.60-1.79'
+                    WHEN odds < 2.00 THEN '1.80-1.99'
+                    WHEN odds < 2.40 THEN '2.00-2.39'
+                    WHEN odds < 3.00 THEN '2.40-2.99'
+                    WHEN odds < 4.00 THEN '3.00-3.99'
+                    WHEN odds < 5.00 THEN '4.00-4.99'
+                    WHEN odds < 6.00 THEN '5.00-5.99'
+                    WHEN odds < 8.00 THEN '6.00-7.99'
+                    WHEN odds < 10.00 THEN '8.00-9.99'
+                    ELSE '>= 10'
+                END
+
+
+            /* ----------------------------------------------------
+               -3.5
+               ---------------------------------------------------- */
+
+            WHEN line = -3.5 THEN
+                CASE
+                    WHEN odds < 1.20 THEN '< 1.20'
+                    WHEN odds < 1.40 THEN '1.20-1.39'
+                    WHEN odds < 1.60 THEN '1.40-1.59'
+                    WHEN odds < 1.80 THEN '1.60-1.79'
+                    WHEN odds < 2.00 THEN '1.80-1.99'
+                    WHEN odds < 2.40 THEN '2.00-2.39'
+                    WHEN odds < 3.00 THEN '2.40-2.99'
+                    WHEN odds < 4.00 THEN '3.00-3.99'
+                    WHEN odds < 6.00 THEN '4.00-5.99'
+                    WHEN odds < 10.00 THEN '6.00-9.99'
+                    ELSE '>= 10'
+                END
+
+            ELSE 'UNKNOWN'
+
+        END AS odds_band,
+
+
+        /* ========================================================
+           BAND ORDER
+           ======================================================== */
+
+        CASE
+
+            /* ----------------------------------------------------
+               -1.5
+               ---------------------------------------------------- */
+
+            WHEN line = -1.5 THEN
+                CASE
+                    WHEN odds < 1.20 THEN 1
+                    WHEN odds < 1.40 THEN 2
+                    WHEN odds < 1.60 THEN 3
+                    WHEN odds < 1.80 THEN 4
+                    WHEN odds < 2.00 THEN 5
+                    WHEN odds < 2.20 THEN 6
+                    WHEN odds < 2.40 THEN 7
+                    WHEN odds < 2.60 THEN 8
+                    WHEN odds < 2.80 THEN 9
+                    WHEN odds < 3.00 THEN 10
+                    WHEN odds < 3.50 THEN 11
+                    WHEN odds < 4.00 THEN 12
+                    WHEN odds < 5.00 THEN 13
+                    WHEN odds < 6.00 THEN 14
+                    WHEN odds < 8.00 THEN 15
+                    WHEN odds < 10.00 THEN 16
+                    WHEN odds < 15.00 THEN 17
+                    ELSE 18
+                END
+
+
+            /* ----------------------------------------------------
+               -2.5
+               ---------------------------------------------------- */
+
+            WHEN line = -2.5 THEN
+                CASE
+                    WHEN odds < 1.20 THEN 1
+                    WHEN odds < 1.40 THEN 2
+                    WHEN odds < 1.60 THEN 3
+                    WHEN odds < 1.80 THEN 4
+                    WHEN odds < 2.00 THEN 5
+                    WHEN odds < 2.40 THEN 6
+                    WHEN odds < 3.00 THEN 7
+                    WHEN odds < 4.00 THEN 8
+                    WHEN odds < 5.00 THEN 9
+                    WHEN odds < 6.00 THEN 10
+                    WHEN odds < 8.00 THEN 11
+                    WHEN odds < 10.00 THEN 12
+                    ELSE 13
+                END
+
+
+            /* ----------------------------------------------------
+               -3.5
+               ---------------------------------------------------- */
+
+            WHEN line = -3.5 THEN
+                CASE
+                    WHEN odds < 1.20 THEN 1
+                    WHEN odds < 1.40 THEN 2
+                    WHEN odds < 1.60 THEN 3
+                    WHEN odds < 1.80 THEN 4
+                    WHEN odds < 2.00 THEN 5
+                    WHEN odds < 2.40 THEN 6
+                    WHEN odds < 3.00 THEN 7
+                    WHEN odds < 4.00 THEN 8
+                    WHEN odds < 6.00 THEN 9
+                    WHEN odds < 10.00 THEN 10
+                    ELSE 11
+                END
+
+            ELSE 0
+
+        END AS band_order
+
+    FROM normalized
 )
 
 
 /* ================================================================
-   ORAN BAND ANALİZİ
+   SONUÇ
    ================================================================ */
 
 SELECT
@@ -239,173 +422,15 @@ SELECT
 
     market,
 
+    odds_band,
 
-    /* ============================================================
-       ORAN BANDI
-       ============================================================ */
-
-    CASE
-
-        /* ========================================================
-           -1.5
-           ======================================================== */
-
-        WHEN line = -1.5 THEN
-            CASE
-                WHEN odds < 1.20 THEN '< 1.20'
-                WHEN odds < 1.40 THEN '1.20-1.39'
-                WHEN odds < 1.60 THEN '1.40-1.59'
-                WHEN odds < 1.80 THEN '1.60-1.79'
-                WHEN odds < 2.00 THEN '1.80-1.99'
-                WHEN odds < 2.20 THEN '2.00-2.19'
-                WHEN odds < 2.40 THEN '2.20-2.39'
-                WHEN odds < 2.60 THEN '2.40-2.59'
-                WHEN odds < 2.80 THEN '2.60-2.79'
-                WHEN odds < 3.00 THEN '2.80-2.99'
-                WHEN odds < 3.50 THEN '3.00-3.49'
-                WHEN odds < 4.00 THEN '3.50-3.99'
-                WHEN odds < 5.00 THEN '4.00-4.99'
-                WHEN odds < 6.00 THEN '5.00-5.99'
-                WHEN odds < 8.00 THEN '6.00-7.99'
-                WHEN odds < 10.00 THEN '8.00-9.99'
-                WHEN odds < 15.00 THEN '10.00-14.99'
-                ELSE '>= 15'
-            END
-
-
-        /* ========================================================
-           -2.5
-           ======================================================== */
-
-        WHEN line = -2.5 THEN
-            CASE
-                WHEN odds < 1.20 THEN '< 1.20'
-                WHEN odds < 1.40 THEN '1.20-1.39'
-                WHEN odds < 1.60 THEN '1.40-1.59'
-                WHEN odds < 1.80 THEN '1.60-1.79'
-                WHEN odds < 2.00 THEN '1.80-1.99'
-                WHEN odds < 2.40 THEN '2.00-2.39'
-                WHEN odds < 3.00 THEN '2.40-2.99'
-                WHEN odds < 4.00 THEN '3.00-3.99'
-                WHEN odds < 5.00 THEN '4.00-4.99'
-                WHEN odds < 6.00 THEN '5.00-5.99'
-                WHEN odds < 8.00 THEN '6.00-7.99'
-                WHEN odds < 10.00 THEN '8.00-9.99'
-                ELSE '>= 10'
-            END
-
-
-        /* ========================================================
-           -3.5
-           ======================================================== */
-
-        WHEN line = -3.5 THEN
-            CASE
-                WHEN odds < 1.20 THEN '< 1.20'
-                WHEN odds < 1.40 THEN '1.20-1.39'
-                WHEN odds < 1.60 THEN '1.40-1.59'
-                WHEN odds < 1.80 THEN '1.60-1.79'
-                WHEN odds < 2.00 THEN '1.80-1.99'
-                WHEN odds < 2.40 THEN '2.00-2.39'
-                WHEN odds < 3.00 THEN '2.40-2.99'
-                WHEN odds < 4.00 THEN '3.00-3.99'
-                WHEN odds < 6.00 THEN '4.00-5.99'
-                WHEN odds < 10.00 THEN '6.00-9.99'
-                ELSE '>= 10'
-            END
-
-        ELSE 'UNKNOWN'
-
-    END AS odds_band,
-
-
-    /* ============================================================
-       BAND ORDER
-       ============================================================ */
-
-    CASE
-
-        /* ========================================================
-           -1.5
-           ======================================================== */
-
-        WHEN line = -1.5 THEN
-            CASE
-                WHEN odds < 1.20 THEN 1
-                WHEN odds < 1.40 THEN 2
-                WHEN odds < 1.60 THEN 3
-                WHEN odds < 1.80 THEN 4
-                WHEN odds < 2.00 THEN 5
-                WHEN odds < 2.20 THEN 6
-                WHEN odds < 2.40 THEN 7
-                WHEN odds < 2.60 THEN 8
-                WHEN odds < 2.80 THEN 9
-                WHEN odds < 3.00 THEN 10
-                WHEN odds < 3.50 THEN 11
-                WHEN odds < 4.00 THEN 12
-                WHEN odds < 5.00 THEN 13
-                WHEN odds < 6.00 THEN 14
-                WHEN odds < 8.00 THEN 15
-                WHEN odds < 10.00 THEN 16
-                WHEN odds < 15.00 THEN 17
-                ELSE 18
-            END
-
-
-        /* ========================================================
-           -2.5
-           ======================================================== */
-
-        WHEN line = -2.5 THEN
-            CASE
-                WHEN odds < 1.20 THEN 1
-                WHEN odds < 1.40 THEN 2
-                WHEN odds < 1.60 THEN 3
-                WHEN odds < 1.80 THEN 4
-                WHEN odds < 2.00 THEN 5
-                WHEN odds < 2.40 THEN 6
-                WHEN odds < 3.00 THEN 7
-                WHEN odds < 4.00 THEN 8
-                WHEN odds < 5.00 THEN 9
-                WHEN odds < 6.00 THEN 10
-                WHEN odds < 8.00 THEN 11
-                WHEN odds < 10.00 THEN 12
-                ELSE 13
-            END
-
-
-        /* ========================================================
-           -3.5
-           ======================================================== */
-
-        WHEN line = -3.5 THEN
-            CASE
-                WHEN odds < 1.20 THEN 1
-                WHEN odds < 1.40 THEN 2
-                WHEN odds < 1.60 THEN 3
-                WHEN odds < 1.80 THEN 4
-                WHEN odds < 2.00 THEN 5
-                WHEN odds < 2.40 THEN 6
-                WHEN odds < 3.00 THEN 7
-                WHEN odds < 4.00 THEN 8
-                WHEN odds < 6.00 THEN 9
-                WHEN odds < 10.00 THEN 10
-                ELSE 11
-            END
-
-        ELSE 0
-
-    END AS band_order,
-
-
-    /* ============================================================
-       İSTATİSTİKLER
-       ============================================================ */
+    band_order,
 
     count() AS matches,
 
     round(
-        count() * 100.0 /
+        count() * 100.0
+        /
         sum(count()) OVER
         (
             PARTITION BY line, market
@@ -419,19 +444,17 @@ SELECT
 
     max(odds) AS max_odds,
 
-
     toFloat64(0) AS range_min,
 
     toFloat64(0) AS range_max
 
-
-FROM normalized
+FROM bands
 
 WHERE 1 = 1
 
 
 /* ================================================================
-   MANUEL LINE
+   MANUEL AH LINE
    ================================================================ */
 
 {% if defined(ah_line) %}
@@ -468,17 +491,9 @@ GROUP BY
     band_order
 
 
-/* ================================================================
-   SIRALAMA
-   ================================================================ */
-
 ORDER BY
     line,
-    CASE
-        WHEN market = 'HOME' THEN 1
-        WHEN market = 'AWAY' THEN 2
-        ELSE 3
-    END,
+    min(market_order),
     band_order
 
 TYPE ENDPOINT
