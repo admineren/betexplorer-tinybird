@@ -4,393 +4,411 @@ DESCRIPTION >
   Kaynak:
   betexplorer_matches
 
-  AH line:
-  -1.5
-  -2.5
-  -3.5
+  Çizgiler:
+  - -1.5
+  - -2.5
+  - -3.5
 
-  Her line icin:
+  Her çizgide:
   - HOME
   - AWAY
+  - Oran bandı
+  - Maç sayısı
+  - Yüzde
+  - Ortalama oran
+  - Minimum oran
+  - Maksimum oran
 
-  Standart filtreler:
-  - country
-  - league
-  - season
+  Parametreler:
+  country
+  league
+  season
+  ah_line
+  market
+  range_min
+  range_max
 
-  Manuel filtreler:
-  - ah_line
-  - market
-  - range_min
-  - range_max
-
-  has_odds = 'True' SQL icinde sabittir.
-
-  Genel sonuc:
-  - oran araligi
-  - mac sayisi
-  - yuzde
-  - ortalama oran
-  - minimum oran
-  - maksimum oran
-
-  Siralama:
-  - line ASC
-  - HOME
-  - AWAY
-  - band_order ASC
-  - CUSTOM son
+  has_odds = 'True' SQL içinde sabittir.
 
 
 NODE odds_ah_query
 SQL >
 %
 
-WITH filtered AS
+WITH normalized AS
 (
     /* ============================================================
-       HOME
+       AH -1.5 HOME
        ============================================================ */
 
     SELECT
-        ah_line,
-        ah_home AS odds,
-        'HOME' AS market
+        -1.5 AS line,
+        'HOME' AS market,
+        toFloat64(ah_home) AS odds
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
-      AND isNotNull(ah_line)
       AND isNotNull(ah_home)
-      AND toFloat64(ah_line) IN (-1.5, -2.5, -3.5)
+      AND isNotNull(ah_line)
+      AND toFloat64(ah_line) = -1.5
 
-    {% if defined(country) %}
+{% if defined(country) %}
       AND country = {{String(country)}}
-    {% end %}
+{% end %}
 
-    {% if defined(league) %}
+{% if defined(league) %}
       AND league = {{String(league)}}
-    {% end %}
+{% end %}
 
-    {% if defined(season) %}
+{% if defined(season) %}
       AND season = {{String(season)}}
-    {% end %}
+{% end %}
 
 
     UNION ALL
 
 
     /* ============================================================
-       AWAY
+       AH -1.5 AWAY
        ============================================================ */
 
     SELECT
-        ah_line,
-        ah_away AS odds,
-        'AWAY' AS market
+        -1.5 AS line,
+        'AWAY' AS market,
+        toFloat64(ah_away) AS odds
 
     FROM betexplorer_matches
 
     WHERE has_odds = 'True'
-      AND isNotNull(ah_line)
       AND isNotNull(ah_away)
-      AND toFloat64(ah_line) IN (-1.5, -2.5, -3.5)
+      AND isNotNull(ah_line)
+      AND toFloat64(ah_line) = -1.5
 
-    {% if defined(country) %}
+{% if defined(country) %}
       AND country = {{String(country)}}
-    {% end %}
+{% end %}
 
-    {% if defined(league) %}
+{% if defined(league) %}
       AND league = {{String(league)}}
-    {% end %}
+{% end %}
 
-    {% if defined(season) %}
+{% if defined(season) %}
       AND season = {{String(season)}}
-    {% end %}
+{% end %}
+
+
+    UNION ALL
+
+
+    /* ============================================================
+       AH -2.5 HOME
+       ============================================================ */
+
+    SELECT
+        -2.5 AS line,
+        'HOME' AS market,
+        toFloat64(ah_home) AS odds
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+      AND isNotNull(ah_home)
+      AND isNotNull(ah_line)
+      AND toFloat64(ah_line) = -2.5
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    /* ============================================================
+       AH -2.5 AWAY
+       ============================================================ */
+
+    SELECT
+        -2.5 AS line,
+        'AWAY' AS market,
+        toFloat64(ah_away) AS odds
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+      AND isNotNull(ah_away)
+      AND isNotNull(ah_line)
+      AND toFloat64(ah_line) = -2.5
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    /* ============================================================
+       AH -3.5 HOME
+       ============================================================ */
+
+    SELECT
+        -3.5 AS line,
+        'HOME' AS market,
+        toFloat64(ah_home) AS odds
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+      AND isNotNull(ah_home)
+      AND isNotNull(ah_line)
+      AND toFloat64(ah_line) = -3.5
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    UNION ALL
+
+
+    /* ============================================================
+       AH -3.5 AWAY
+       ============================================================ */
+
+    SELECT
+        -3.5 AS line,
+        'AWAY' AS market,
+        toFloat64(ah_away) AS odds
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+      AND isNotNull(ah_away)
+      AND isNotNull(ah_line)
+      AND toFloat64(ah_line) = -3.5
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
 )
 
 
 /* ================================================================
-   GENEL ORAN DAGILIMI
+   ORAN BAND ANALİZİ
    ================================================================ */
 
 SELECT
 
     'ODDS_BAND' AS section,
 
-    market,
+    line,
 
-    toFloat64(ah_line) AS line,
+    market,
 
 
     /* ============================================================
-       ORAN ARALIGI
+       ORAN BANDI
        ============================================================ */
 
-    multiIf(
+    CASE
 
-        /* --------------------------------------------------------
+        /* ========================================================
            -1.5
-           -------------------------------------------------------- */
+           ======================================================== */
 
-        toFloat64(ah_line) = -1.5
-            AND odds < 1.20,
-            '<1.20',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 1.40,
-            '1.20-1.39',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 1.60,
-            '1.40-1.59',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 1.80,
-            '1.60-1.79',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 2.00,
-            '1.80-1.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 2.20,
-            '2.00-2.19',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 2.40,
-            '2.20-2.39',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 2.60,
-            '2.40-2.59',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 2.80,
-            '2.60-2.79',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 3.00,
-            '2.80-2.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 3.50,
-            '3.00-3.49',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 4.00,
-            '3.50-3.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 5.00,
-            '4.00-4.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 6.00,
-            '5.00-5.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 8.00,
-            '6.00-7.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 10.00,
-            '8.00-9.99',
-
-        toFloat64(ah_line) = -1.5
-            AND odds < 15.00,
-            '10.00-14.99',
-
-        toFloat64(ah_line) = -1.5,
-            '>=15',
+        WHEN line = -1.5 THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.40 THEN '1.20-1.39'
+                WHEN odds < 1.60 THEN '1.40-1.59'
+                WHEN odds < 1.80 THEN '1.60-1.79'
+                WHEN odds < 2.00 THEN '1.80-1.99'
+                WHEN odds < 2.20 THEN '2.00-2.19'
+                WHEN odds < 2.40 THEN '2.20-2.39'
+                WHEN odds < 2.60 THEN '2.40-2.59'
+                WHEN odds < 2.80 THEN '2.60-2.79'
+                WHEN odds < 3.00 THEN '2.80-2.99'
+                WHEN odds < 3.50 THEN '3.00-3.49'
+                WHEN odds < 4.00 THEN '3.50-3.99'
+                WHEN odds < 5.00 THEN '4.00-4.99'
+                WHEN odds < 6.00 THEN '5.00-5.99'
+                WHEN odds < 8.00 THEN '6.00-7.99'
+                WHEN odds < 10.00 THEN '8.00-9.99'
+                WHEN odds < 15.00 THEN '10.00-14.99'
+                ELSE '>= 15'
+            END
 
 
-        /* --------------------------------------------------------
+        /* ========================================================
            -2.5
-           -------------------------------------------------------- */
+           ======================================================== */
 
-        toFloat64(ah_line) = -2.5
-            AND odds < 1.20,
-            '<1.20',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 1.40,
-            '1.20-1.39',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 1.60,
-            '1.40-1.59',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 1.80,
-            '1.60-1.79',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 2.00,
-            '1.80-1.99',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 2.40,
-            '2.00-2.39',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 3.00,
-            '2.40-2.99',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 4.00,
-            '3.00-3.99',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 5.00,
-            '4.00-4.99',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 6.00,
-            '5.00-5.99',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 8.00,
-            '6.00-7.99',
-
-        toFloat64(ah_line) = -2.5
-            AND odds < 10.00,
-            '8.00-9.99',
-
-        toFloat64(ah_line) = -2.5,
-            '>=10',
+        WHEN line = -2.5 THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.40 THEN '1.20-1.39'
+                WHEN odds < 1.60 THEN '1.40-1.59'
+                WHEN odds < 1.80 THEN '1.60-1.79'
+                WHEN odds < 2.00 THEN '1.80-1.99'
+                WHEN odds < 2.40 THEN '2.00-2.39'
+                WHEN odds < 3.00 THEN '2.40-2.99'
+                WHEN odds < 4.00 THEN '3.00-3.99'
+                WHEN odds < 5.00 THEN '4.00-4.99'
+                WHEN odds < 6.00 THEN '5.00-5.99'
+                WHEN odds < 8.00 THEN '6.00-7.99'
+                WHEN odds < 10.00 THEN '8.00-9.99'
+                ELSE '>= 10'
+            END
 
 
-        /* --------------------------------------------------------
+        /* ========================================================
            -3.5
-           -------------------------------------------------------- */
+           ======================================================== */
 
-        toFloat64(ah_line) = -3.5
-            AND odds < 1.20,
-            '<1.20',
+        WHEN line = -3.5 THEN
+            CASE
+                WHEN odds < 1.20 THEN '< 1.20'
+                WHEN odds < 1.40 THEN '1.20-1.39'
+                WHEN odds < 1.60 THEN '1.40-1.59'
+                WHEN odds < 1.80 THEN '1.60-1.79'
+                WHEN odds < 2.00 THEN '1.80-1.99'
+                WHEN odds < 2.40 THEN '2.00-2.39'
+                WHEN odds < 3.00 THEN '2.40-2.99'
+                WHEN odds < 4.00 THEN '3.00-3.99'
+                WHEN odds < 6.00 THEN '4.00-5.99'
+                WHEN odds < 10.00 THEN '6.00-9.99'
+                ELSE '>= 10'
+            END
 
-        toFloat64(ah_line) = -3.5
-            AND odds < 1.40,
-            '1.20-1.39',
+        ELSE 'UNKNOWN'
 
-        toFloat64(ah_line) = -3.5
-            AND odds < 1.60,
-            '1.40-1.59',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 1.80,
-            '1.60-1.79',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 2.00,
-            '1.80-1.99',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 2.40,
-            '2.00-2.39',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 3.00,
-            '2.40-2.99',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 4.00,
-            '3.00-3.99',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 6.00,
-            '4.00-5.99',
-
-        toFloat64(ah_line) = -3.5
-            AND odds < 10.00,
-            '6.00-9.99',
-
-        '>=10'
-    ) AS odds_band,
+    END AS odds_band,
 
 
     /* ============================================================
        BAND ORDER
        ============================================================ */
 
-    multiIf(
+    CASE
 
-        /* --------------------------------------------------------
+        /* ========================================================
            -1.5
-           -------------------------------------------------------- */
+           ======================================================== */
 
-        toFloat64(ah_line) = -1.5 AND odds < 1.20, 1,
-        toFloat64(ah_line) = -1.5 AND odds < 1.40, 2,
-        toFloat64(ah_line) = -1.5 AND odds < 1.60, 3,
-        toFloat64(ah_line) = -1.5 AND odds < 1.80, 4,
-        toFloat64(ah_line) = -1.5 AND odds < 2.00, 5,
-        toFloat64(ah_line) = -1.5 AND odds < 2.20, 6,
-        toFloat64(ah_line) = -1.5 AND odds < 2.40, 7,
-        toFloat64(ah_line) = -1.5 AND odds < 2.60, 8,
-        toFloat64(ah_line) = -1.5 AND odds < 2.80, 9,
-        toFloat64(ah_line) = -1.5 AND odds < 3.00, 10,
-        toFloat64(ah_line) = -1.5 AND odds < 3.50, 11,
-        toFloat64(ah_line) = -1.5 AND odds < 4.00, 12,
-        toFloat64(ah_line) = -1.5 AND odds < 5.00, 13,
-        toFloat64(ah_line) = -1.5 AND odds < 6.00, 14,
-        toFloat64(ah_line) = -1.5 AND odds < 8.00, 15,
-        toFloat64(ah_line) = -1.5 AND odds < 10.00, 16,
-        toFloat64(ah_line) = -1.5 AND odds < 15.00, 17,
-        toFloat64(ah_line) = -1.5, 18,
+        WHEN line = -1.5 THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.40 THEN 2
+                WHEN odds < 1.60 THEN 3
+                WHEN odds < 1.80 THEN 4
+                WHEN odds < 2.00 THEN 5
+                WHEN odds < 2.20 THEN 6
+                WHEN odds < 2.40 THEN 7
+                WHEN odds < 2.60 THEN 8
+                WHEN odds < 2.80 THEN 9
+                WHEN odds < 3.00 THEN 10
+                WHEN odds < 3.50 THEN 11
+                WHEN odds < 4.00 THEN 12
+                WHEN odds < 5.00 THEN 13
+                WHEN odds < 6.00 THEN 14
+                WHEN odds < 8.00 THEN 15
+                WHEN odds < 10.00 THEN 16
+                WHEN odds < 15.00 THEN 17
+                ELSE 18
+            END
 
 
-        /* --------------------------------------------------------
+        /* ========================================================
            -2.5
-           -------------------------------------------------------- */
+           ======================================================== */
 
-        toFloat64(ah_line) = -2.5 AND odds < 1.20, 1,
-        toFloat64(ah_line) = -2.5 AND odds < 1.40, 2,
-        toFloat64(ah_line) = -2.5 AND odds < 1.60, 3,
-        toFloat64(ah_line) = -2.5 AND odds < 1.80, 4,
-        toFloat64(ah_line) = -2.5 AND odds < 2.00, 5,
-        toFloat64(ah_line) = -2.5 AND odds < 2.40, 6,
-        toFloat64(ah_line) = -2.5 AND odds < 3.00, 7,
-        toFloat64(ah_line) = -2.5 AND odds < 4.00, 8,
-        toFloat64(ah_line) = -2.5 AND odds < 5.00, 9,
-        toFloat64(ah_line) = -2.5 AND odds < 6.00, 10,
-        toFloat64(ah_line) = -2.5 AND odds < 8.00, 11,
-        toFloat64(ah_line) = -2.5 AND odds < 10.00, 12,
-        toFloat64(ah_line) = -2.5, 13,
+        WHEN line = -2.5 THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.40 THEN 2
+                WHEN odds < 1.60 THEN 3
+                WHEN odds < 1.80 THEN 4
+                WHEN odds < 2.00 THEN 5
+                WHEN odds < 2.40 THEN 6
+                WHEN odds < 3.00 THEN 7
+                WHEN odds < 4.00 THEN 8
+                WHEN odds < 5.00 THEN 9
+                WHEN odds < 6.00 THEN 10
+                WHEN odds < 8.00 THEN 11
+                WHEN odds < 10.00 THEN 12
+                ELSE 13
+            END
 
 
-        /* --------------------------------------------------------
+        /* ========================================================
            -3.5
-           -------------------------------------------------------- */
+           ======================================================== */
 
-        toFloat64(ah_line) = -3.5 AND odds < 1.20, 1,
-        toFloat64(ah_line) = -3.5 AND odds < 1.40, 2,
-        toFloat64(ah_line) = -3.5 AND odds < 1.60, 3,
-        toFloat64(ah_line) = -3.5 AND odds < 1.80, 4,
-        toFloat64(ah_line) = -3.5 AND odds < 2.00, 5,
-        toFloat64(ah_line) = -3.5 AND odds < 2.40, 6,
-        toFloat64(ah_line) = -3.5 AND odds < 3.00, 7,
-        toFloat64(ah_line) = -3.5 AND odds < 4.00, 8,
-        toFloat64(ah_line) = -3.5 AND odds < 6.00, 9,
-        toFloat64(ah_line) = -3.5 AND odds < 10.00, 10,
-        toFloat64(ah_line) = -3.5, 11,
+        WHEN line = -3.5 THEN
+            CASE
+                WHEN odds < 1.20 THEN 1
+                WHEN odds < 1.40 THEN 2
+                WHEN odds < 1.60 THEN 3
+                WHEN odds < 1.80 THEN 4
+                WHEN odds < 2.00 THEN 5
+                WHEN odds < 2.40 THEN 6
+                WHEN odds < 3.00 THEN 7
+                WHEN odds < 4.00 THEN 8
+                WHEN odds < 6.00 THEN 9
+                WHEN odds < 10.00 THEN 10
+                ELSE 11
+            END
 
-        0
+        ELSE 0
 
-    ) AS band_order,
+    END AS band_order,
 
 
     /* ============================================================
-       ISTATISTIKLER
+       İSTATİSTİKLER
        ============================================================ */
 
     count() AS matches,
 
     round(
-        count() * 100.0
-        /
+        count() * 100.0 /
         sum(count()) OVER
         (
-            PARTITION BY ah_line, market
+            PARTITION BY line, market
         ),
         2
     ) AS percentage,
@@ -399,114 +417,68 @@ SELECT
 
     min(odds) AS min_odds,
 
-    max(odds) AS max_odds
+    max(odds) AS max_odds,
 
 
-FROM filtered
+    toFloat64(0) AS range_min,
 
-WHERE odds IS NOT NULL
+    toFloat64(0) AS range_max
+
+
+FROM normalized
+
+WHERE 1 = 1
+
+
+/* ================================================================
+   MANUEL LINE
+   ================================================================ */
 
 {% if defined(ah_line) %}
-  AND toFloat64(ah_line) = {{Float64(ah_line)}}
+  AND line = {{Float64(ah_line)}}
 {% end %}
+
+
+/* ================================================================
+   MANUEL MARKET
+   ================================================================ */
 
 {% if defined(market) %}
   AND market = upper({{String(market)}})
 {% end %}
 
+
+/* ================================================================
+   MANUEL ORAN ARALIĞI
+   ================================================================ */
+
+{% if defined(range_min) %}
+  AND odds >= {{Float64(range_min)}}
+{% end %}
+
+{% if defined(range_max) %}
+  AND odds <= {{Float64(range_max)}}
+{% end %}
+
+
 GROUP BY
-    ah_line,
+    line,
     market,
     odds_band,
     band_order
 
 
 /* ================================================================
-   MANUEL ORAN ARALIGI
-   ================================================================ */
-
-{% if defined(ah_line) and defined(market) and defined(range_min) and defined(range_max) %}
-
-UNION ALL
-
-SELECT
-
-    'CUSTOM' AS section,
-
-    upper({{String(market)}}) AS market,
-
-    {{Float64(ah_line)}} AS line,
-
-    'CUSTOM_RANGE' AS odds_band,
-
-    0 AS band_order,
-
-    count() AS matches,
-
-    round(
-        count() * 100.0
-        /
-        (
-            SELECT count()
-            FROM filtered AS total_rows
-            WHERE toFloat64(total_rows.ah_line)
-                    = {{Float64(ah_line)}}
-
-              AND total_rows.market
-                    = upper({{String(market)}})
-
-              AND total_rows.odds IS NOT NULL
-        ),
-        2
-    ) AS percentage,
-
-    round(avg(odds), 2) AS avg_odds,
-
-    min(odds) AS min_odds,
-
-    max(odds) AS max_odds
-
-
-FROM filtered
-
-WHERE toFloat64(ah_line)
-        = {{Float64(ah_line)}}
-
-  AND market
-        = upper({{String(market)}})
-
-  AND odds >= {{Float64(range_min)}}
-
-  AND odds <= {{Float64(range_max)}}
-
-{% end %}
-
-
-/* ================================================================
-   FINAL SIRALAMA
+   SIRALAMA
    ================================================================ */
 
 ORDER BY
-
-    /* Önce normal bantlar, sonra CUSTOM */
-    multiIf(
-        section = 'ODDS_BAND', 1,
-        section = 'CUSTOM', 2,
-        3
-    ) ASC,
-
-    /* -1.5 -> -2.5 -> -3.5 */
-    line ASC,
-
-    /* HOME -> AWAY */
-    multiIf(
-        market = 'HOME', 1,
-        market = 'AWAY', 2,
-        3
-    ) ASC,
-
-    /* Oran bantlarının kendi sırası */
-    band_order ASC
-
+    line,
+    CASE
+        WHEN market = 'HOME' THEN 1
+        WHEN market = 'AWAY' THEN 2
+        ELSE 3
+    END,
+    band_order
 
 TYPE ENDPOINT
