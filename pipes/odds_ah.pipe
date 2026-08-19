@@ -1,5 +1,5 @@
 DESCRIPTION >
-  Asian Handicap oran band analizi.
+  Asian Handicap oran band ve sonuç analizi.
 
   Kaynak:
   betexplorer_matches
@@ -10,25 +10,29 @@ DESCRIPTION >
   - -3.5
 
   Her çizgide:
-  - HOME
-  - AWAY
+  HOME
+  AWAY
 
-  HOME:
+  HOME karşılığı:
   - -1.5
   - -2.5
   - -3.5
 
-  AWAY:
+  AWAY karşılığı:
   - +1.5
   - +2.5
   - +3.5
 
-  Sonuçlar:
-  - oran aralığı
+  Her oran bandında:
   - maç sayısı
-  - kazanan maç sayısı
-  - kaybeden maç sayısı
-  - kazanma yüzdesi
+  - +2 veya üzeri fark
+  - +1 fark
+  - beraberlik
+  - -1 fark
+  - -2 veya daha fazla fark
+  - AH kazanan maç sayısı
+  - AH kaybeden maç sayısı
+  - AH kazanma yüzdesi
 
   Standart filtreler:
   - country
@@ -58,8 +62,8 @@ WITH normalized AS
         -1.5 AS line,
         'HOME' AS market,
         toFloat64(ah_home) AS odds,
-        ft_home,
-        ft_away
+        toInt32(ft_home) AS ft_home,
+        toInt32(ft_away) AS ft_away
 
     FROM betexplorer_matches
 
@@ -94,8 +98,8 @@ WITH normalized AS
         -1.5 AS line,
         'AWAY' AS market,
         toFloat64(ah_away) AS odds,
-        ft_home,
-        ft_away
+        toInt32(ft_home) AS ft_home,
+        toInt32(ft_away) AS ft_away
 
     FROM betexplorer_matches
 
@@ -130,8 +134,8 @@ WITH normalized AS
         -2.5 AS line,
         'HOME' AS market,
         toFloat64(ah_home) AS odds,
-        ft_home,
-        ft_away
+        toInt32(ft_home) AS ft_home,
+        toInt32(ft_away) AS ft_away
 
     FROM betexplorer_matches
 
@@ -166,8 +170,8 @@ WITH normalized AS
         -2.5 AS line,
         'AWAY' AS market,
         toFloat64(ah_away) AS odds,
-        ft_home,
-        ft_away
+        toInt32(ft_home) AS ft_home,
+        toInt32(ft_away) AS ft_away
 
     FROM betexplorer_matches
 
@@ -202,8 +206,8 @@ WITH normalized AS
         -3.5 AS line,
         'HOME' AS market,
         toFloat64(ah_home) AS odds,
-        ft_home,
-        ft_away
+        toInt32(ft_home) AS ft_home,
+        toInt32(ft_away) AS ft_away
 
     FROM betexplorer_matches
 
@@ -238,8 +242,8 @@ WITH normalized AS
         -3.5 AS line,
         'AWAY' AS market,
         toFloat64(ah_away) AS odds,
-        ft_home,
-        ft_away
+        toInt32(ft_home) AS ft_home,
+        toInt32(ft_away) AS ft_away
 
     FROM betexplorer_matches
 
@@ -265,7 +269,7 @@ WITH normalized AS
 
 
 /* ================================================================
-   BANDLAR VE AH SONUCU
+   BANDLAR
    ================================================================ */
 
 bands AS
@@ -273,15 +277,10 @@ bands AS
     SELECT
 
         line,
-
         market,
-
         odds,
-
         ft_home,
-
         ft_away,
-
 
         /* ========================================================
            MARKET ORDER
@@ -292,6 +291,27 @@ bands AS
             WHEN market = 'AWAY' THEN 2
             ELSE 3
         END AS market_order,
+
+
+        /* ========================================================
+           GERÇEK FARK
+           
+           HOME:
+             ft_home - ft_away
+
+           AWAY:
+             ft_away - ft_home
+           ======================================================== */
+
+        CASE
+            WHEN market = 'HOME'
+                THEN ft_home - ft_away
+
+            WHEN market = 'AWAY'
+                THEN ft_away - ft_home
+
+            ELSE 0
+        END AS goal_difference,
 
 
         /* ========================================================
@@ -379,10 +399,6 @@ bands AS
 
         CASE
 
-            /* ----------------------------------------------------
-               -1.5
-               ---------------------------------------------------- */
-
             WHEN line = -1.5 THEN
                 CASE
                     WHEN odds < 1.20 THEN 1
@@ -406,10 +422,6 @@ bands AS
                 END
 
 
-            /* ----------------------------------------------------
-               -2.5
-               ---------------------------------------------------- */
-
             WHEN line = -2.5 THEN
                 CASE
                     WHEN odds < 1.20 THEN 1
@@ -427,10 +439,6 @@ bands AS
                     ELSE 13
                 END
 
-
-            /* ----------------------------------------------------
-               -3.5
-               ---------------------------------------------------- */
 
             WHEN line = -3.5 THEN
                 CASE
@@ -475,59 +483,112 @@ SELECT
 
 
     /* ============================================================
-       KAZANAN MAÇLAR
+       GERÇEK MAÇ SONUCU DAĞILIMI
+
+       +2_PLUS:
+         seçilen takım 2 veya daha fazla farkla kazandı
+
+       PLUS_1:
+         seçilen takım 1 farkla kazandı
+
+       DRAW:
+         beraberlik
+
+       MINUS_1:
+         seçilen takım 1 farkla kaybetti
+
+       MINUS_2_PLUS:
+         seçilen takım 2 veya daha fazla farkla kaybetti
+       ============================================================ */
+
+    countIf(goal_difference >= 2) AS plus_2_plus,
+
+    countIf(goal_difference = 1) AS plus_1,
+
+    countIf(goal_difference = 0) AS draw,
+
+    countIf(goal_difference = -1) AS minus_1,
+
+    countIf(goal_difference <= -2) AS minus_2_plus,
+
+
+    /* ============================================================
+       ASIAN HANDICAP KAZANANLAR
+
+       HOME -1.5:
+         fark >= 2
+
+       AWAY +1.5:
+         fark >= -1
+
+       Aynı mantık -2.5 ve -3.5 için de geçerlidir.
        ============================================================ */
 
     countIf(
+
         (
             market = 'HOME'
-            AND (ft_home - ft_away) > abs(line)
+            AND goal_difference > abs(line)
         )
+
         OR
+
         (
             market = 'AWAY'
-            AND (ft_away - ft_home) > -abs(line)
+            AND goal_difference > -abs(line)
         )
+
     ) AS wins,
 
 
     /* ============================================================
-       KAYBEDEN MAÇLAR
+       ASIAN HANDICAP KAYBEDENLER
        ============================================================ */
 
     countIf(
+
         NOT
         (
             (
                 market = 'HOME'
-                AND (ft_home - ft_away) > abs(line)
+                AND goal_difference > abs(line)
             )
+
             OR
+
             (
                 market = 'AWAY'
-                AND (ft_away - ft_home) > -abs(line)
+                AND goal_difference > -abs(line)
             )
         )
+
     ) AS losses,
 
 
     /* ============================================================
-       KAZANMA YÜZDESİ
+       AH KAZANMA YÜZDESİ
        ============================================================ */
 
     round(
+
         countIf(
+
             (
                 market = 'HOME'
-                AND (ft_home - ft_away) > abs(line)
+                AND goal_difference > abs(line)
             )
+
             OR
+
             (
                 market = 'AWAY'
-                AND (ft_away - ft_home) > -abs(line)
+                AND goal_difference > -abs(line)
             )
+
         ) * 100.0 / count(),
+
         2
+
     ) AS win_percentage,
 
 
