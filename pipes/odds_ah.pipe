@@ -34,6 +34,13 @@ DESCRIPTION >
   - minimum oran
   - maksimum oran
 
+  Siralama:
+  - line ASC
+  - HOME
+  - AWAY
+  - band_order ASC
+  - CUSTOM son
+
 
 NODE odds_ah_query
 SQL >
@@ -308,7 +315,9 @@ SELECT
 
     multiIf(
 
-        /* -1.5 */
+        /* --------------------------------------------------------
+           -1.5
+           -------------------------------------------------------- */
 
         toFloat64(ah_line) = -1.5 AND odds < 1.20, 1,
         toFloat64(ah_line) = -1.5 AND odds < 1.40, 2,
@@ -330,7 +339,9 @@ SELECT
         toFloat64(ah_line) = -1.5, 18,
 
 
-        /* -2.5 */
+        /* --------------------------------------------------------
+           -2.5
+           -------------------------------------------------------- */
 
         toFloat64(ah_line) = -2.5 AND odds < 1.20, 1,
         toFloat64(ah_line) = -2.5 AND odds < 1.40, 2,
@@ -347,19 +358,23 @@ SELECT
         toFloat64(ah_line) = -2.5, 13,
 
 
-        /* -3.5 */
+        /* --------------------------------------------------------
+           -3.5
+           -------------------------------------------------------- */
 
-        odds < 1.20, 1,
-        odds < 1.40, 2,
-        odds < 1.60, 3,
-        odds < 1.80, 4,
-        odds < 2.00, 5,
-        odds < 2.40, 6,
-        odds < 3.00, 7,
-        odds < 4.00, 8,
-        odds < 6.00, 9,
-        odds < 10.00, 10,
-        11
+        toFloat64(ah_line) = -3.5 AND odds < 1.20, 1,
+        toFloat64(ah_line) = -3.5 AND odds < 1.40, 2,
+        toFloat64(ah_line) = -3.5 AND odds < 1.60, 3,
+        toFloat64(ah_line) = -3.5 AND odds < 1.80, 4,
+        toFloat64(ah_line) = -3.5 AND odds < 2.00, 5,
+        toFloat64(ah_line) = -3.5 AND odds < 2.40, 6,
+        toFloat64(ah_line) = -3.5 AND odds < 3.00, 7,
+        toFloat64(ah_line) = -3.5 AND odds < 4.00, 8,
+        toFloat64(ah_line) = -3.5 AND odds < 6.00, 9,
+        toFloat64(ah_line) = -3.5 AND odds < 10.00, 10,
+        toFloat64(ah_line) = -3.5, 11,
+
+        0
 
     ) AS band_order,
 
@@ -465,5 +480,33 @@ WHERE toFloat64(ah_line)
   AND odds <= {{Float64(range_max)}}
 
 {% end %}
+
+
+/* ================================================================
+   FINAL SIRALAMA
+   ================================================================ */
+
+ORDER BY
+
+    /* Önce normal bantlar, sonra CUSTOM */
+    multiIf(
+        section = 'ODDS_BAND', 1,
+        section = 'CUSTOM', 2,
+        3
+    ) ASC,
+
+    /* -1.5 -> -2.5 -> -3.5 */
+    line ASC,
+
+    /* HOME -> AWAY */
+    multiIf(
+        market = 'HOME', 1,
+        market = 'AWAY', 2,
+        3
+    ) ASC,
+
+    /* Oran bantlarının kendi sırası */
+    band_order ASC
+
 
 TYPE ENDPOINT
