@@ -10,18 +10,20 @@ DESCRIPTION >
   - -3.5
 
   Her çizgide:
-  HOME
-  AWAY
+  - HOME
+  - AWAY
 
-  HOME karşılığı:
+  HOME:
+  - ah_home oranı
   - -1.5
   - -2.5
   - -3.5
 
-  AWAY karşılığı:
-  - +1.5
-  - +2.5
-  - +3.5
+  AWAY:
+  - ah_away oranı
+  - -1.5
+  - -2.5
+  - -3.5
 
   Her oran bandında:
   - maç sayısı
@@ -33,6 +35,28 @@ DESCRIPTION >
   - AH kazanan maç sayısı
   - AH kaybeden maç sayısı
   - AH kazanma yüzdesi
+
+  Sonuç farkı her zaman seçilen markete göredir:
+
+  HOME:
+    goal_difference = ft_home - ft_away
+
+  AWAY:
+    goal_difference = ft_away - ft_home
+
+  AH kazanma:
+
+  -1.5:
+    goal_difference >= 2
+
+  -2.5:
+    goal_difference >= 3
+
+  -3.5:
+    goal_difference >= 4
+
+  AH kaybetme:
+    yukarıdaki şartın sağlanmadığı tüm maçlar.
 
   Standart filtreler:
   - country
@@ -269,7 +293,7 @@ WITH normalized AS
 
 
 /* ================================================================
-   BANDLAR
+   BANDLAR VE SEÇİLEN TARAFIN GOL FARKI
    ================================================================ */
 
 bands AS
@@ -294,8 +318,8 @@ bands AS
 
 
         /* ========================================================
-           GERÇEK FARK
-           
+           SEÇİLEN TAKIMIN GOL FARKI
+
            HOME:
              ft_home - ft_away
 
@@ -485,83 +509,69 @@ SELECT
     /* ============================================================
        GERÇEK MAÇ SONUCU DAĞILIMI
 
-       +2_PLUS:
-         seçilen takım 2 veya daha fazla farkla kazandı
+       Seçilen takım açısından:
 
-       PLUS_1:
-         seçilen takım 1 farkla kazandı
+       +2 veya üzeri:
+         goal_difference >= 2
 
-       DRAW:
-         beraberlik
+       +1:
+         goal_difference = 1
 
-       MINUS_1:
-         seçilen takım 1 farkla kaybetti
+       beraberlik:
+         goal_difference = 0
 
-       MINUS_2_PLUS:
-         seçilen takım 2 veya daha fazla farkla kaybetti
-       ============================================================ */
+       -1:
+         goal_difference = -1
 
-    countIf(goal_difference >= 2) AS plus_2_plus,
-
-    countIf(goal_difference = 1) AS plus_1,
-
-    countIf(goal_difference = 0) AS draw,
-
-    countIf(goal_difference = -1) AS minus_1,
-
-    countIf(goal_difference <= -2) AS minus_2_plus,
-
-
-    /* ============================================================
-       ASIAN HANDICAP KAZANANLAR
-
-       HOME -1.5:
-         fark >= 2
-
-       AWAY +1.5:
-         fark >= -1
-
-       Aynı mantık -2.5 ve -3.5 için de geçerlidir.
+       -2 veya daha fazla:
+         goal_difference <= -2
        ============================================================ */
 
     countIf(
+        goal_difference >= 2
+    ) AS plus_2_plus,
 
-        (
-            market = 'HOME'
-            AND goal_difference > abs(line)
-        )
+    countIf(
+        goal_difference = 1
+    ) AS plus_1,
 
-        OR
+    countIf(
+        goal_difference = 0
+    ) AS draw,
 
-        (
-            market = 'AWAY'
-            AND goal_difference > -abs(line)
-        )
+    countIf(
+        goal_difference = -1
+    ) AS minus_1,
 
+    countIf(
+        goal_difference <= -2
+    ) AS minus_2_plus,
+
+
+    /* ============================================================
+       ASIAN HANDICAP KAZANAN
+
+       -1.5:
+         +2 veya üzeri gerekir
+
+       -2.5:
+         +3 veya üzeri gerekir
+
+       -3.5:
+         +4 veya üzeri gerekir
+       ============================================================ */
+
+    countIf(
+        goal_difference > abs(line)
     ) AS wins,
 
 
     /* ============================================================
-       ASIAN HANDICAP KAYBEDENLER
+       ASIAN HANDICAP KAYBEDEN
        ============================================================ */
 
     countIf(
-
-        NOT
-        (
-            (
-                market = 'HOME'
-                AND goal_difference > abs(line)
-            )
-
-            OR
-
-            (
-                market = 'AWAY'
-                AND goal_difference > -abs(line)
-            )
-        )
-
+        goal_difference <= abs(line)
     ) AS losses,
 
 
@@ -570,25 +580,10 @@ SELECT
        ============================================================ */
 
     round(
-
         countIf(
-
-            (
-                market = 'HOME'
-                AND goal_difference > abs(line)
-            )
-
-            OR
-
-            (
-                market = 'AWAY'
-                AND goal_difference > -abs(line)
-            )
-
+            goal_difference > abs(line)
         ) * 100.0 / count(),
-
         2
-
     ) AS win_percentage,
 
 
