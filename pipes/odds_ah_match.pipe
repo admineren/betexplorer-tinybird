@@ -1,0 +1,444 @@
+DESCRIPTION >
+  Asian Handicap maç bazlı filtreleme ve sonuç analizi.
+
+  Kaynak:
+  betexplorer_matches
+
+  Amaç:
+  Kullanıcının belirlediği AH line,
+  takım ve oran aralıklarına uyan
+  gerçek maçları listelemek.
+
+  Desteklenen AH çizgileri:
+  - -1.5
+  - -2.5
+  - -3.5
+
+  Standart filtreler:
+  - country
+  - league
+  - season
+
+  AH filtresi:
+  - ah_line
+
+  Takım filtresi:
+  - team
+  - team_side
+
+  HOME AH oran filtresi:
+  - home_min
+  - home_max
+
+  AWAY AH oran filtresi:
+  - away_min
+  - away_max
+
+  Pagination:
+  - limit
+  - offset
+
+  Sonuçlar:
+  - match_id
+  - tarih
+  - saat
+  - home_team
+  - away_team
+  - HT skoru
+  - FT skoru
+  - AH line
+  - HOME AH oranı
+  - AWAY AH oranı
+  - HOME AH sonucu
+  - AWAY AH sonucu
+  - seçilen takım
+  - seçilen taraf
+  - seçilen takımın AH sonucu
+
+  AH sonucu yalnızca FT skoruna göre hesaplanır.
+
+  HOME:
+    -1.5 -> HOME en az 2 fark kazanmalı
+    -2.5 -> HOME en az 3 fark kazanmalı
+    -3.5 -> HOME en az 4 fark kazanmalı
+
+  AWAY:
+    -1.5 -> AWAY en az 2 fark kazanmalı
+    -2.5 -> AWAY en az 3 fark kazanmalı
+    -3.5 -> AWAY en az 4 fark kazanmalı
+
+  HT skoru yalnızca bilgilendirme amaçlıdır.
+
+  has_odds = 'True' SQL içinde sabittir.
+
+
+NODE odds_ah_match_query
+SQL >
+%
+
+WITH normalized AS
+(
+    SELECT
+
+        match_id,
+
+        country,
+        league,
+        season,
+
+        home_team,
+        away_team,
+
+        date,
+        time,
+
+        ht_home,
+        ht_away,
+
+        ft_home,
+        ft_away,
+
+        bookmaker_ah,
+
+        toFloat64(ah_line) AS ah_line,
+        toFloat64(ah_home) AS ah_home,
+        toFloat64(ah_away) AS ah_away
+
+    FROM betexplorer_matches
+
+    WHERE has_odds = 'True'
+
+      AND isNotNull(ah_line)
+      AND isNotNull(ah_home)
+      AND isNotNull(ah_away)
+
+{% if defined(country) %}
+      AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+      AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+      AND season = {{String(season)}}
+{% end %}
+
+
+    /* ============================================================
+       AH LINE
+       ============================================================ */
+
+{% if defined(ah_line) %}
+      AND toFloat64(ah_line) = {{Float64(ah_line)}}
+{% end %}
+
+
+    /* ============================================================
+       TAKIM FILTRESI
+       ============================================================ */
+
+{% if defined(team) %}
+      AND
+      (
+          home_team = {{String(team)}}
+          OR
+          away_team = {{String(team)}}
+      )
+{% end %}
+
+
+    /* ============================================================
+       TAKIM TARAFI
+       
+       team_side yalnızca team ile birlikte anlamlıdır.
+       HOME:
+         seçilen takım home_team olmalı.
+
+       AWAY:
+         seçilen takım away_team olmalı.
+
+       ALL:
+         takımın hem home hem away maçları.
+       ============================================================ */
+
+{% if defined(team) and defined(team_side) %}
+
+      AND
+      (
+          (
+              upper({{String(team_side)}}) = 'HOME'
+              AND home_team = {{String(team)}}
+          )
+
+          OR
+
+          (
+              upper({{String(team_side)}}) = 'AWAY'
+              AND away_team = {{String(team)}}
+          )
+
+          OR
+
+          upper({{String(team_side)}}) = 'ALL'
+      )
+
+{% end %}
+
+
+    /* ============================================================
+       HOME AH ORAN FILTRESI
+       ============================================================ */
+
+{% if defined(home_min) %}
+      AND ah_home >= {{Float64(home_min)}}
+{% end %}
+
+{% if defined(home_max) %}
+      AND ah_home <= {{Float64(home_max)}}
+{% end %}
+
+
+    /* ============================================================
+       AWAY AH ORAN FILTRESI
+       ============================================================ */
+
+{% if defined(away_min) %}
+      AND ah_away >= {{Float64(away_min)}}
+{% end %}
+
+{% if defined(away_max) %}
+      AND ah_away <= {{Float64(away_max)}}
+{% end %}
+)
+
+
+/* ================================================================
+   SONUÇ
+   ================================================================ */
+
+SELECT
+
+    match_id,
+
+    country,
+    league,
+    season,
+
+    date,
+    time,
+
+    home_team,
+    away_team,
+
+    /* ============================================================
+       HT
+       ============================================================ */
+
+    ht_home,
+    ht_away,
+
+
+    /* ============================================================
+       FT
+       ============================================================ */
+
+    ft_home,
+    ft_away,
+
+
+    /* ============================================================
+       AH
+       ============================================================ */
+
+    ah_line,
+    ah_home,
+    ah_away,
+
+    bookmaker_ah,
+
+
+    /* ============================================================
+       MAÇ SONUCU
+       ============================================================ */
+
+    CASE
+        WHEN ft_home > ft_away THEN 'HOME'
+        WHEN ft_home < ft_away THEN 'AWAY'
+        ELSE 'DRAW'
+    END AS match_result,
+
+
+    /* ============================================================
+       HOME AH SONUCU
+       ============================================================ */
+
+    CASE
+
+        WHEN ah_line = -1.5
+             AND (ft_home - ft_away) >= 2
+            THEN 'WIN'
+
+        WHEN ah_line = -2.5
+             AND (ft_home - ft_away) >= 3
+            THEN 'WIN'
+
+        WHEN ah_line = -3.5
+             AND (ft_home - ft_away) >= 4
+            THEN 'WIN'
+
+        ELSE 'LOSS'
+
+    END AS home_ah_result,
+
+
+    /* ============================================================
+       AWAY AH SONUCU
+       ============================================================ */
+
+    CASE
+
+        WHEN ah_line = -1.5
+             AND (ft_away - ft_home) >= 2
+            THEN 'WIN'
+
+        WHEN ah_line = -2.5
+             AND (ft_away - ft_home) >= 3
+            THEN 'WIN'
+
+        WHEN ah_line = -3.5
+             AND (ft_away - ft_home) >= 4
+            THEN 'WIN'
+
+        ELSE 'LOSS'
+
+    END AS away_ah_result,
+
+
+    /* ============================================================
+       SEÇİLEN TAKIM
+       ============================================================ */
+
+{% if defined(team) %}
+
+    CASE
+
+        WHEN home_team = {{String(team)}}
+            THEN home_team
+
+        WHEN away_team = {{String(team)}}
+            THEN away_team
+
+        ELSE ''
+
+    END AS selected_team,
+
+
+    /* ============================================================
+       SEÇİLEN TAKIM TARAFI
+       ============================================================ */
+
+    CASE
+
+        WHEN home_team = {{String(team)}}
+            THEN 'HOME'
+
+        WHEN away_team = {{String(team)}}
+            THEN 'AWAY'
+
+        ELSE ''
+
+    END AS selected_side,
+
+
+    /* ============================================================
+       SEÇİLEN TAKIM AH SONUCU
+       ============================================================ */
+
+    CASE
+
+        WHEN home_team = {{String(team)}} THEN
+
+            CASE
+
+                WHEN ah_line = -1.5
+                     AND (ft_home - ft_away) >= 2
+                    THEN 'WIN'
+
+                WHEN ah_line = -2.5
+                     AND (ft_home - ft_away) >= 3
+                    THEN 'WIN'
+
+                WHEN ah_line = -3.5
+                     AND (ft_home - ft_away) >= 4
+                    THEN 'WIN'
+
+                ELSE 'LOSS'
+
+            END
+
+
+        WHEN away_team = {{String(team)}} THEN
+
+            CASE
+
+                WHEN ah_line = -1.5
+                     AND (ft_away - ft_home) >= 2
+                    THEN 'WIN'
+
+                WHEN ah_line = -2.5
+                     AND (ft_away - ft_home) >= 3
+                    THEN 'WIN'
+
+                WHEN ah_line = -3.5
+                     AND (ft_away - ft_home) >= 4
+                    THEN 'WIN'
+
+                ELSE 'LOSS'
+
+            END
+
+        ELSE ''
+
+    END AS ah_result
+
+{% else %}
+
+    '' AS selected_team,
+
+    '' AS selected_side,
+
+    '' AS ah_result
+
+{% end %}
+
+
+FROM normalized
+
+
+/* ================================================================
+   SIRALAMA
+   ================================================================ */
+
+ORDER BY
+    date DESC,
+    time DESC,
+    match_id DESC
+
+
+/* ================================================================
+   PAGINATION
+
+   Varsayılan:
+   limit  = 50
+   offset = 0
+
+   Tinybird typed parameter kullanımı.
+   ================================================================ */
+
+LIMIT {{Int32(limit, 50)}}
+
+OFFSET {{Int32(offset, 0)}}
+
+
+TYPE ENDPOINT
