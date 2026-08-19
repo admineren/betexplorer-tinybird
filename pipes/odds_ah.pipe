@@ -1,6 +1,9 @@
 DESCRIPTION >
     Asian Handicap odds distribution API.
 
+    Source:
+    betexplorer_matches
+
     Supported lines:
     -1.5
     -2.5
@@ -14,17 +17,18 @@ DESCRIPTION >
     country
     league
     season
+    line
+    side
 
     Custom range:
-    range_min
-    range_max
+    line + side + range_min + range_max
 
     has_odds is fixed to 'True' and is not an API parameter.
 
 
 NODE odds_ah_query
-SQL >
 
+SQL >
 %
 
 /* ============================================================
@@ -33,504 +37,671 @@ SQL >
 
 SELECT
     'GENERAL' AS section,
-
-    {{Float32(line, -1.5)}} AS line,
-
-    upper({{String(side, 'HOME')}}) AS side,
-
+    toFloat32(0) AS line,
+    'ALL' AS side,
     'ALL' AS odds_band,
-
     toUInt8(0) AS band_order,
 
     count() AS matches,
 
     toFloat64(100.00) AS percentage,
 
-    round(avg(ah_odds), 2) AS avg_odds,
+    round(
+        (
+            toFloat64(avg(ah_home))
+            +
+            toFloat64(avg(ah_away))
+        ) / 2.0,
+        2
+    ) AS avg_odds,
 
-    min(ah_odds) AS min_odds,
+    toFloat64(least(min(ah_home), min(ah_away))) AS min_odds,
 
-    max(ah_odds) AS max_odds,
+    toFloat64(greatest(max(ah_home), max(ah_away))) AS max_odds,
 
     toFloat64(0) AS range_min,
 
     toFloat64(0) AS range_max
 
-FROM
-(
-    SELECT
-        if(
-            upper({{String(side, 'HOME')}}) = 'HOME',
-            ah_home,
-            ah_away
-        ) AS ah_odds
+FROM betexplorer_matches
 
-    FROM betexplorer_matches
+WHERE has_odds = 'True'
 
-    WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
 
-      AND ah_line IS NOT NULL
-
-      AND ah_line = {{Float32(line, -1.5)}}
-
-      AND upper({{String(side, 'HOME')}})
-          IN ('HOME', 'AWAY')
-
-      AND if(
-            upper({{String(side, 'HOME')}}) = 'HOME',
-            ah_home,
-            ah_away
-          ) IS NOT NULL
+  AND isNotNull(ah_home)
+  AND isNotNull(ah_away)
 
 {% if defined(country) %}
-      AND country = {{String(country)}}
+  AND country = {{String(country)}}
 {% end %}
 
 {% if defined(league) %}
-      AND league = {{String(league)}}
+  AND league = {{String(league)}}
 {% end %}
 
 {% if defined(season) %}
-      AND season = {{String(season)}}
+  AND season = {{String(season)}}
 {% end %}
-
-) AS general_data
 
 
 UNION ALL
 
 
 /* ============================================================
-   ODDS BANDS
+   -1.5 HOME
    ============================================================ */
 
 SELECT
     'ODDS_BAND' AS section,
 
-    {{Float32(line, -1.5)}} AS line,
+    toFloat32(-1.5) AS line,
 
-    upper({{String(side, 'HOME')}}) AS side,
+    'HOME' AS side,
 
-    odds_band,
+    CASE
+        WHEN ah_home < 1.20 THEN '<1.20'
+        WHEN ah_home < 1.40 THEN '1.20-1.39'
+        WHEN ah_home < 1.60 THEN '1.40-1.59'
+        WHEN ah_home < 1.80 THEN '1.60-1.79'
+        WHEN ah_home < 2.00 THEN '1.80-1.99'
+        WHEN ah_home < 2.20 THEN '2.00-2.19'
+        WHEN ah_home < 2.40 THEN '2.20-2.39'
+        WHEN ah_home < 2.60 THEN '2.40-2.59'
+        WHEN ah_home < 2.80 THEN '2.60-2.79'
+        WHEN ah_home < 3.00 THEN '2.80-2.99'
+        WHEN ah_home < 3.50 THEN '3.00-3.49'
+        WHEN ah_home < 4.00 THEN '3.50-3.99'
+        WHEN ah_home < 5.00 THEN '4.00-4.99'
+        WHEN ah_home < 6.00 THEN '5.00-5.99'
+        WHEN ah_home < 8.00 THEN '6.00-7.99'
+        WHEN ah_home < 10.00 THEN '8.00-9.99'
+        WHEN ah_home < 15.00 THEN '10.00-14.99'
+        ELSE '>=15'
+    END AS odds_band,
 
-    band_order,
+    CASE
+        WHEN ah_home < 1.20 THEN 1
+        WHEN ah_home < 1.40 THEN 2
+        WHEN ah_home < 1.60 THEN 3
+        WHEN ah_home < 1.80 THEN 4
+        WHEN ah_home < 2.00 THEN 5
+        WHEN ah_home < 2.20 THEN 6
+        WHEN ah_home < 2.40 THEN 7
+        WHEN ah_home < 2.60 THEN 8
+        WHEN ah_home < 2.80 THEN 9
+        WHEN ah_home < 3.00 THEN 10
+        WHEN ah_home < 3.50 THEN 11
+        WHEN ah_home < 4.00 THEN 12
+        WHEN ah_home < 5.00 THEN 13
+        WHEN ah_home < 6.00 THEN 14
+        WHEN ah_home < 8.00 THEN 15
+        WHEN ah_home < 10.00 THEN 16
+        WHEN ah_home < 15.00 THEN 17
+        ELSE 18
+    END AS band_order,
 
-    matches,
+    count() AS matches,
 
-    percentage,
+    round(
+        count() * 100.0 / sum(count()) OVER (),
+        2
+    ) AS percentage,
 
-    avg_odds,
+    round(
+        toFloat64(avg(ah_home)),
+        2
+    ) AS avg_odds,
 
-    min_odds,
+    toFloat64(min(ah_home)) AS min_odds,
 
-    max_odds,
+    toFloat64(max(ah_home)) AS max_odds,
 
     toFloat64(0) AS range_min,
-
     toFloat64(0) AS range_max
 
-FROM
-(
-    SELECT
-
-        /* ----------------------------------------------------
-           ODDS BAND
-           ---------------------------------------------------- */
-
-        multiIf(
-
-            /* =========================
-               -1.5
-               ========================= */
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.20,
-                '<1.20',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.40,
-                '1.20-1.39',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.60,
-                '1.40-1.59',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.80,
-                '1.60-1.79',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.00,
-                '1.80-1.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.20,
-                '2.00-2.19',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.40,
-                '2.20-2.39',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.60,
-                '2.40-2.59',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.80,
-                '2.60-2.79',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 3.00,
-                '2.80-2.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 3.50,
-                '3.00-3.49',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 4.00,
-                '3.50-3.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 5.00,
-                '4.00-4.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 6.00,
-                '5.00-5.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 8.00,
-                '6.00-7.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 10.00,
-                '8.00-9.99',
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 15.00,
-                '10.00-14.99',
-
-            {{Float32(line, -1.5)}} = -1.5,
-                '>=15',
-
-
-            /* =========================
-               -2.5
-               ========================= */
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.20,
-                '<1.20',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.40,
-                '1.20-1.39',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.60,
-                '1.40-1.59',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.80,
-                '1.60-1.79',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 2.00,
-                '1.80-1.99',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 2.40,
-                '2.00-2.39',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 3.00,
-                '2.40-2.99',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 4.00,
-                '3.00-3.99',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 5.00,
-                '4.00-4.99',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 6.00,
-                '5.00-5.99',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 8.00,
-                '6.00-7.99',
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 10.00,
-                '8.00-9.99',
-
-            {{Float32(line, -1.5)}} = -2.5,
-                '>=10',
-
-
-            /* =========================
-               -3.5
-               ========================= */
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.20,
-                '<1.20',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.40,
-                '1.20-1.39',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.60,
-                '1.40-1.59',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.80,
-                '1.60-1.79',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 2.00,
-                '1.80-1.99',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 2.40,
-                '2.00-2.39',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 3.00,
-                '2.40-2.99',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 4.00,
-                '3.00-3.99',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 6.00,
-                '4.00-5.99',
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 10.00,
-                '6.00-9.99',
-
-            {{Float32(line, -1.5)}} = -3.5,
-                '>=10',
-
-            'UNKNOWN'
-
-        ) AS odds_band,
-
-
-        /* ----------------------------------------------------
-           BAND ORDER
-           ---------------------------------------------------- */
-
-        multiIf(
-
-            /* -1.5 */
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.20, 1,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.40, 2,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.60, 3,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 1.80, 4,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.00, 5,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.20, 6,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.40, 7,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.60, 8,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 2.80, 9,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 3.00, 10,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 3.50, 11,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 4.00, 12,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 5.00, 13,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 6.00, 14,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 8.00, 15,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 10.00, 16,
-
-            {{Float32(line, -1.5)}} = -1.5
-            AND ah_odds < 15.00, 17,
-
-            {{Float32(line, -1.5)}} = -1.5, 18,
-
-
-            /* -2.5 */
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.20, 1,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.40, 2,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.60, 3,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 1.80, 4,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 2.00, 5,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 2.40, 6,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 3.00, 7,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 4.00, 8,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 5.00, 9,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 6.00, 10,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 8.00, 11,
-
-            {{Float32(line, -1.5)}} = -2.5
-            AND ah_odds < 10.00, 12,
-
-            {{Float32(line, -1.5)}} = -2.5, 13,
-
-
-            /* -3.5 */
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.20, 1,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.40, 2,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.60, 3,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 1.80, 4,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 2.00, 5,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 2.40, 6,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 3.00, 7,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 4.00, 8,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 6.00, 9,
-
-            {{Float32(line, -1.5)}} = -3.5
-            AND ah_odds < 10.00, 10,
-
-            {{Float32(line, -1.5)}} = -3.5, 11,
-
-            0
-
-        ) AS band_order,
-
-        ah_odds
-
-    FROM
-    (
-        SELECT
-            if(
-                upper({{String(side, 'HOME')}}) = 'HOME',
-                ah_home,
-                ah_away
-            ) AS ah_odds
-
-        FROM betexplorer_matches
-
-        WHERE has_odds = 'True'
-
-          AND ah_line IS NOT NULL
-
-          AND ah_line = {{Float32(line, -1.5)}}
-
-          AND upper({{String(side, 'HOME')}})
-              IN ('HOME', 'AWAY')
-
-          AND if(
-                upper({{String(side, 'HOME')}}) = 'HOME',
-                ah_home,
-                ah_away
-              ) IS NOT NULL
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
+  AND ah_line = toFloat32(-1.5)
+  AND isNotNull(ah_home)
 
 {% if defined(country) %}
-          AND country = {{String(country)}}
+  AND country = {{String(country)}}
 {% end %}
 
 {% if defined(league) %}
-          AND league = {{String(league)}}
+  AND league = {{String(league)}}
 {% end %}
 
 {% if defined(season) %}
-          AND season = {{String(season)}}
+  AND season = {{String(season)}}
 {% end %}
 
-    ) AS source_data
+{% if defined(line) %}
+  AND {{Float32(line)}} = toFloat32(-1.5)
+{% end %}
 
-) AS classified_data
+{% if defined(side) %}
+  AND upper({{String(side)}}) = 'HOME'
+{% end %}
 
 GROUP BY
     odds_band,
     band_order
 
-ORDER BY
-    band_order
-
-
-{% if defined(range_min) and defined(range_max) %}
 
 UNION ALL
 
 
 /* ============================================================
-   CUSTOM RANGE
+   -1.5 AWAY
    ============================================================ */
+
+SELECT
+    'ODDS_BAND' AS section,
+
+    toFloat32(-1.5) AS line,
+
+    'AWAY' AS side,
+
+    CASE
+        WHEN ah_away < 1.20 THEN '<1.20'
+        WHEN ah_away < 1.40 THEN '1.20-1.39'
+        WHEN ah_away < 1.60 THEN '1.40-1.59'
+        WHEN ah_away < 1.80 THEN '1.60-1.79'
+        WHEN ah_away < 2.00 THEN '1.80-1.99'
+        WHEN ah_away < 2.20 THEN '2.00-2.19'
+        WHEN ah_away < 2.40 THEN '2.20-2.39'
+        WHEN ah_away < 2.60 THEN '2.40-2.59'
+        WHEN ah_away < 2.80 THEN '2.60-2.79'
+        WHEN ah_away < 3.00 THEN '2.80-2.99'
+        WHEN ah_away < 3.50 THEN '3.00-3.49'
+        WHEN ah_away < 4.00 THEN '3.50-3.99'
+        WHEN ah_away < 5.00 THEN '4.00-4.99'
+        WHEN ah_away < 6.00 THEN '5.00-5.99'
+        WHEN ah_away < 8.00 THEN '6.00-7.99'
+        WHEN ah_away < 10.00 THEN '8.00-9.99'
+        WHEN ah_away < 15.00 THEN '10.00-14.99'
+        ELSE '>=15'
+    END AS odds_band,
+
+    CASE
+        WHEN ah_away < 1.20 THEN 1
+        WHEN ah_away < 1.40 THEN 2
+        WHEN ah_away < 1.60 THEN 3
+        WHEN ah_away < 1.80 THEN 4
+        WHEN ah_away < 2.00 THEN 5
+        WHEN ah_away < 2.20 THEN 6
+        WHEN ah_away < 2.40 THEN 7
+        WHEN ah_away < 2.60 THEN 8
+        WHEN ah_away < 2.80 THEN 9
+        WHEN ah_away < 3.00 THEN 10
+        WHEN ah_away < 3.50 THEN 11
+        WHEN ah_away < 4.00 THEN 12
+        WHEN ah_away < 5.00 THEN 13
+        WHEN ah_away < 6.00 THEN 14
+        WHEN ah_away < 8.00 THEN 15
+        WHEN ah_away < 10.00 THEN 16
+        WHEN ah_away < 15.00 THEN 17
+        ELSE 18
+    END AS band_order,
+
+    count() AS matches,
+
+    round(
+        count() * 100.0 / sum(count()) OVER (),
+        2
+    ) AS percentage,
+
+    round(
+        toFloat64(avg(ah_away)),
+        2
+    ) AS avg_odds,
+
+    toFloat64(min(ah_away)) AS min_odds,
+
+    toFloat64(max(ah_away)) AS max_odds,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
+  AND ah_line = toFloat32(-1.5)
+  AND isNotNull(ah_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+{% if defined(line) %}
+  AND {{Float32(line)}} = toFloat32(-1.5)
+{% end %}
+
+{% if defined(side) %}
+  AND upper({{String(side)}}) = 'AWAY'
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+UNION ALL
+
+
+/* ============================================================
+   -2.5 HOME
+   ============================================================ */
+
+SELECT
+    'ODDS_BAND' AS section,
+
+    toFloat32(-2.5) AS line,
+
+    'HOME' AS side,
+
+    CASE
+        WHEN ah_home < 1.20 THEN '<1.20'
+        WHEN ah_home < 1.40 THEN '1.20-1.39'
+        WHEN ah_home < 1.60 THEN '1.40-1.59'
+        WHEN ah_home < 1.80 THEN '1.60-1.79'
+        WHEN ah_home < 2.00 THEN '1.80-1.99'
+        WHEN ah_home < 2.40 THEN '2.00-2.39'
+        WHEN ah_home < 3.00 THEN '2.40-2.99'
+        WHEN ah_home < 4.00 THEN '3.00-3.99'
+        WHEN ah_home < 5.00 THEN '4.00-4.99'
+        WHEN ah_home < 6.00 THEN '5.00-5.99'
+        WHEN ah_home < 8.00 THEN '6.00-7.99'
+        WHEN ah_home < 10.00 THEN '8.00-9.99'
+        ELSE '>=10'
+    END AS odds_band,
+
+    CASE
+        WHEN ah_home < 1.20 THEN 1
+        WHEN ah_home < 1.40 THEN 2
+        WHEN ah_home < 1.60 THEN 3
+        WHEN ah_home < 1.80 THEN 4
+        WHEN ah_home < 2.00 THEN 5
+        WHEN ah_home < 2.40 THEN 6
+        WHEN ah_home < 3.00 THEN 7
+        WHEN ah_home < 4.00 THEN 8
+        WHEN ah_home < 5.00 THEN 9
+        WHEN ah_home < 6.00 THEN 10
+        WHEN ah_home < 8.00 THEN 11
+        WHEN ah_home < 10.00 THEN 12
+        ELSE 13
+    END AS band_order,
+
+    count() AS matches,
+
+    round(
+        count() * 100.0 / sum(count()) OVER (),
+        2
+    ) AS percentage,
+
+    round(
+        toFloat64(avg(ah_home)),
+        2
+    ) AS avg_odds,
+
+    toFloat64(min(ah_home)) AS min_odds,
+
+    toFloat64(max(ah_home)) AS max_odds,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
+  AND ah_line = toFloat32(-2.5)
+  AND isNotNull(ah_home)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+{% if defined(line) %}
+  AND {{Float32(line)}} = toFloat32(-2.5)
+{% end %}
+
+{% if defined(side) %}
+  AND upper({{String(side)}}) = 'HOME'
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+UNION ALL
+
+
+/* ============================================================
+   -2.5 AWAY
+   ============================================================ */
+
+SELECT
+    'ODDS_BAND' AS section,
+
+    toFloat32(-2.5) AS line,
+
+    'AWAY' AS side,
+
+    CASE
+        WHEN ah_away < 1.20 THEN '<1.20'
+        WHEN ah_away < 1.40 THEN '1.20-1.39'
+        WHEN ah_away < 1.60 THEN '1.40-1.59'
+        WHEN ah_away < 1.80 THEN '1.60-1.79'
+        WHEN ah_away < 2.00 THEN '1.80-1.99'
+        WHEN ah_away < 2.40 THEN '2.00-2.39'
+        WHEN ah_away < 3.00 THEN '2.40-2.99'
+        WHEN ah_away < 4.00 THEN '3.00-3.99'
+        WHEN ah_away < 5.00 THEN '4.00-4.99'
+        WHEN ah_away < 6.00 THEN '5.00-5.99'
+        WHEN ah_away < 8.00 THEN '6.00-7.99'
+        WHEN ah_away < 10.00 THEN '8.00-9.99'
+        ELSE '>=10'
+    END AS odds_band,
+
+    CASE
+        WHEN ah_away < 1.20 THEN 1
+        WHEN ah_away < 1.40 THEN 2
+        WHEN ah_away < 1.60 THEN 3
+        WHEN ah_away < 1.80 THEN 4
+        WHEN ah_away < 2.00 THEN 5
+        WHEN ah_away < 2.40 THEN 6
+        WHEN ah_away < 3.00 THEN 7
+        WHEN ah_away < 4.00 THEN 8
+        WHEN ah_away < 5.00 THEN 9
+        WHEN ah_away < 6.00 THEN 10
+        WHEN ah_away < 8.00 THEN 11
+        WHEN ah_away < 10.00 THEN 12
+        ELSE 13
+    END AS band_order,
+
+    count() AS matches,
+
+    round(
+        count() * 100.0 / sum(count()) OVER (),
+        2
+    ) AS percentage,
+
+    round(
+        toFloat64(avg(ah_away)),
+        2
+    ) AS avg_odds,
+
+    toFloat64(min(ah_away)) AS min_odds,
+
+    toFloat64(max(ah_away)) AS max_odds,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
+  AND ah_line = toFloat32(-2.5)
+  AND isNotNull(ah_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+{% if defined(line) %}
+  AND {{Float32(line)}} = toFloat32(-2.5)
+{% end %}
+
+{% if defined(side) %}
+  AND upper({{String(side)}}) = 'AWAY'
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+UNION ALL
+
+
+/* ============================================================
+   -3.5 HOME
+   ============================================================ */
+
+SELECT
+    'ODDS_BAND' AS section,
+
+    toFloat32(-3.5) AS line,
+
+    'HOME' AS side,
+
+    CASE
+        WHEN ah_home < 1.20 THEN '<1.20'
+        WHEN ah_home < 1.40 THEN '1.20-1.39'
+        WHEN ah_home < 1.60 THEN '1.40-1.59'
+        WHEN ah_home < 1.80 THEN '1.60-1.79'
+        WHEN ah_home < 2.00 THEN '1.80-1.99'
+        WHEN ah_home < 2.40 THEN '2.00-2.39'
+        WHEN ah_home < 3.00 THEN '2.40-2.99'
+        WHEN ah_home < 4.00 THEN '3.00-3.99'
+        WHEN ah_home < 6.00 THEN '4.00-5.99'
+        WHEN ah_home < 10.00 THEN '6.00-9.99'
+        ELSE '>=10'
+    END AS odds_band,
+
+    CASE
+        WHEN ah_home < 1.20 THEN 1
+        WHEN ah_home < 1.40 THEN 2
+        WHEN ah_home < 1.60 THEN 3
+        WHEN ah_home < 1.80 THEN 4
+        WHEN ah_home < 2.00 THEN 5
+        WHEN ah_home < 2.40 THEN 6
+        WHEN ah_home < 3.00 THEN 7
+        WHEN ah_home < 4.00 THEN 8
+        WHEN ah_home < 6.00 THEN 9
+        WHEN ah_home < 10.00 THEN 10
+        ELSE 11
+    END AS band_order,
+
+    count() AS matches,
+
+    round(
+        count() * 100.0 / sum(count()) OVER (),
+        2
+    ) AS percentage,
+
+    round(
+        toFloat64(avg(ah_home)),
+        2
+    ) AS avg_odds,
+
+    toFloat64(min(ah_home)) AS min_odds,
+
+    toFloat64(max(ah_home)) AS max_odds,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
+  AND ah_line = toFloat32(-3.5)
+  AND isNotNull(ah_home)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+{% if defined(line) %}
+  AND {{Float32(line)}} = toFloat32(-3.5)
+{% end %}
+
+{% if defined(side) %}
+  AND upper({{String(side)}}) = 'HOME'
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+UNION ALL
+
+
+/* ============================================================
+   -3.5 AWAY
+   ============================================================ */
+
+SELECT
+    'ODDS_BAND' AS section,
+
+    toFloat32(-3.5) AS line,
+
+    'AWAY' AS side,
+
+    CASE
+        WHEN ah_away < 1.20 THEN '<1.20'
+        WHEN ah_away < 1.40 THEN '1.20-1.39'
+        WHEN ah_away < 1.60 THEN '1.40-1.59'
+        WHEN ah_away < 1.80 THEN '1.60-1.79'
+        WHEN ah_away < 2.00 THEN '1.80-1.99'
+        WHEN ah_away < 2.40 THEN '2.00-2.39'
+        WHEN ah_away < 3.00 THEN '2.40-2.99'
+        WHEN ah_away < 4.00 THEN '3.00-3.99'
+        WHEN ah_away < 6.00 THEN '4.00-5.99'
+        WHEN ah_away < 10.00 THEN '6.00-9.99'
+        ELSE '>=10'
+    END AS odds_band,
+
+    CASE
+        WHEN ah_away < 1.20 THEN 1
+        WHEN ah_away < 1.40 THEN 2
+        WHEN ah_away < 1.60 THEN 3
+        WHEN ah_away < 1.80 THEN 4
+        WHEN ah_away < 2.00 THEN 5
+        WHEN ah_away < 2.40 THEN 6
+        WHEN ah_away < 3.00 THEN 7
+        WHEN ah_away < 4.00 THEN 8
+        WHEN ah_away < 6.00 THEN 9
+        WHEN ah_away < 10.00 THEN 10
+        ELSE 11
+    END AS band_order,
+
+    count() AS matches,
+
+    round(
+        count() * 100.0 / sum(count()) OVER (),
+        2
+    ) AS percentage,
+
+    round(
+        toFloat64(avg(ah_away)),
+        2
+    ) AS avg_odds,
+
+    toFloat64(min(ah_away)) AS min_odds,
+
+    toFloat64(max(ah_away)) AS max_odds,
+
+    toFloat64(0) AS range_min,
+    toFloat64(0) AS range_max
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+  AND ah_line IS NOT NULL
+  AND ah_line = toFloat32(-3.5)
+  AND isNotNull(ah_away)
+
+{% if defined(country) %}
+  AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+  AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+  AND season = {{String(season)}}
+{% end %}
+
+{% if defined(line) %}
+  AND {{Float32(line)}} = toFloat32(-3.5)
+{% end %}
+
+{% if defined(side) %}
+  AND upper({{String(side)}}) = 'AWAY'
+{% end %}
+
+GROUP BY
+    odds_band,
+    band_order
+
+
+/* ============================================================
+   CUSTOM DIRECT RANGE
+
+   Required:
+   line
+   side
+   range_min
+   range_max
+   ============================================================ */
+
+{% if defined(line) %}
+{% if defined(side) %}
+{% if defined(range_min) %}
+{% if defined(range_max) %}
+
+UNION ALL
 
 SELECT
     'CUSTOM' AS section,
 
-    {{Float32(line, -1.5)}} AS line,
+    toFloat32({{Float32(line)}}) AS line,
 
-    upper({{String(side, 'HOME')}}) AS side,
+    upper({{String(side)}}) AS side,
 
     'CUSTOM_RANGE' AS odds_band,
 
@@ -540,21 +711,24 @@ SELECT
 
     toFloat64(100.00) AS percentage,
 
-    round(avg(ah_odds), 2) AS avg_odds,
+    round(
+        toFloat64(avg(ah_odds)),
+        2
+    ) AS avg_odds,
 
-    min(ah_odds) AS min_odds,
+    toFloat64(min(ah_odds)) AS min_odds,
 
-    max(ah_odds) AS max_odds,
+    toFloat64(max(ah_odds)) AS max_odds,
 
-    {{Float32(range_min)}} AS range_min,
+    toFloat64({{Float64(range_min)}}) AS range_min,
 
-    {{Float32(range_max)}} AS range_max
+    toFloat64({{Float64(range_max)}}) AS range_max
 
 FROM
 (
     SELECT
         if(
-            upper({{String(side, 'HOME')}}) = 'HOME',
+            upper({{String(side)}}) = 'HOME',
             ah_home,
             ah_away
         ) AS ah_odds
@@ -565,16 +739,31 @@ FROM
 
       AND ah_line IS NOT NULL
 
-      AND ah_line = {{Float32(line, -1.5)}}
+      AND ah_line =
+          toFloat32({{Float32(line)}})
 
-      AND upper({{String(side, 'HOME')}})
+      AND upper({{String(side)}})
           IN ('HOME', 'AWAY')
 
+      AND isNotNull(
+          if(
+              upper({{String(side)}}) = 'HOME',
+              ah_home,
+              ah_away
+          )
+      )
+
       AND if(
-            upper({{String(side, 'HOME')}}) = 'HOME',
-            ah_home,
-            ah_away
-          ) IS NOT NULL
+          upper({{String(side)}}) = 'HOME',
+          ah_home,
+          ah_away
+      ) >= {{Float64(range_min)}}
+
+      AND if(
+          upper({{String(side)}}) = 'HOME',
+          ah_home,
+          ah_away
+      ) <= {{Float64(range_max)}}
 
 {% if defined(country) %}
       AND country = {{String(country)}}
@@ -588,21 +777,35 @@ FROM
       AND season = {{String(season)}}
 {% end %}
 
-      AND if(
-            upper({{String(side, 'HOME')}}) = 'HOME',
-            ah_home,
-            ah_away
-          ) >= {{Float32(range_min)}}
-
-      AND if(
-            upper({{String(side, 'HOME')}}) = 'HOME',
-            ah_home,
-            ah_away
-          ) <= {{Float32(range_max)}}
-
 ) AS custom_data
 
 {% end %}
+{% end %}
+{% end %}
+{% end %}
 
+
+/* ============================================================
+   ORDER
+   ============================================================ */
+
+ORDER BY
+
+    CASE
+        WHEN section = 'GENERAL' THEN 0
+        WHEN section = 'ODDS_BAND' THEN 1
+        WHEN section = 'CUSTOM' THEN 2
+        ELSE 9
+    END,
+
+    line,
+
+    CASE
+        WHEN side = 'HOME' THEN 1
+        WHEN side = 'AWAY' THEN 2
+        ELSE 0
+    END,
+
+    band_order
 
 TYPE ENDPOINT
