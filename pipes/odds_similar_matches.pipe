@@ -1,0 +1,547 @@
+DESCRIPTION >
+  Girilen oran profiline en benzer geçmiş maçları bulur.
+
+  Kullanıcı tolerance / min_score vermez.
+  Sistem oranları implied probability'ye çevirir,
+  market bazında profil mesafesi hesaplar ve
+  market mesafelerini eşit ağırlıkla birleştirir.
+
+  Desteklenen marketler:
+  - 1X2
+  - O/U
+  - BTTS
+  - AH
+
+  En az bir market verilmelidir.
+
+  O/U için line eşleşmesi zorunludur.
+  AH için line eşleşmesi zorunludur.
+
+NODE odds_similar_matches_query
+SQL >
+%
+
+WITH
+
+/* ============================================================
+   TARGET 1X2 PROBABILITIES
+   ============================================================ */
+
+1.0 / {{Float64(home_odds)}} AS target_1x2_home_raw,
+1.0 / {{Float64(draw_odds)}} AS target_1x2_draw_raw,
+1.0 / {{Float64(away_odds)}} AS target_1x2_away_raw,
+
+(
+    (1.0 / {{Float64(home_odds)}})
+    +
+    (1.0 / {{Float64(draw_odds)}})
+    +
+    (1.0 / {{Float64(away_odds)}})
+) AS target_1x2_sum,
+
+target_1x2_home_raw / target_1x2_sum AS target_1x2_home_p,
+target_1x2_draw_raw / target_1x2_sum AS target_1x2_draw_p,
+target_1x2_away_raw / target_1x2_sum AS target_1x2_away_p,
+
+
+/* ============================================================
+   TARGET O/U PROBABILITIES
+   ============================================================ */
+
+1.0 / {{Float64(over_odds)}} AS target_ou_over_raw,
+1.0 / {{Float64(under_odds)}} AS target_ou_under_raw,
+
+(
+    (1.0 / {{Float64(over_odds)}})
+    +
+    (1.0 / {{Float64(under_odds)}})
+) AS target_ou_sum,
+
+target_ou_over_raw / target_ou_sum AS target_ou_over_p,
+target_ou_under_raw / target_ou_sum AS target_ou_under_p,
+
+
+/* ============================================================
+   TARGET BTTS PROBABILITIES
+   ============================================================ */
+
+1.0 / {{Float64(btts_yes_odds)}} AS target_btts_yes_raw,
+1.0 / {{Float64(btts_no_odds)}} AS target_btts_no_raw,
+
+(
+    (1.0 / {{Float64(btts_yes_odds)}})
+    +
+    (1.0 / {{Float64(btts_no_odds)}})
+) AS target_btts_sum,
+
+target_btts_yes_raw / target_btts_sum AS target_btts_yes_p,
+target_btts_no_raw / target_btts_sum AS target_btts_no_p,
+
+
+/* ============================================================
+   TARGET AH PROBABILITIES
+   ============================================================ */
+
+1.0 / {{Float64(ah_home_odds)}} AS target_ah_home_raw,
+1.0 / {{Float64(ah_away_odds)}} AS target_ah_away_raw,
+
+(
+    (1.0 / {{Float64(ah_home_odds)}})
+    +
+    (1.0 / {{Float64(ah_away_odds)}})
+) AS target_ah_sum,
+
+target_ah_home_raw / target_ah_sum AS target_ah_home_p,
+target_ah_away_raw / target_ah_sum AS target_ah_away_p,
+
+
+/* ============================================================
+   CANDIDATE MARKET PROBABILITIES
+   ============================================================ */
+
+1.0 / home_odds AS hist_1x2_home_raw,
+1.0 / draw_odds AS hist_1x2_draw_raw,
+1.0 / away_odds AS hist_1x2_away_raw,
+
+(
+    (1.0 / home_odds)
+    +
+    (1.0 / draw_odds)
+    +
+    (1.0 / away_odds)
+) AS hist_1x2_sum,
+
+hist_1x2_home_raw / hist_1x2_sum AS hist_1x2_home_p,
+hist_1x2_draw_raw / hist_1x2_sum AS hist_1x2_draw_p,
+hist_1x2_away_raw / hist_1x2_sum AS hist_1x2_away_p,
+
+
+/* ============================================================
+   HISTORICAL O/U PROBABILITIES
+   ============================================================ */
+
+CASE
+    {% if defined(ou_line) %}
+    WHEN {{Float64(ou_line)}} = 1.5 THEN
+        (1.0 / ou1_5_over)
+        /
+        (
+            (1.0 / ou1_5_over)
+            +
+            (1.0 / ou1_5_under)
+        )
+
+    WHEN {{Float64(ou_line)}} = 2.5 THEN
+        (1.0 / ou2_5_over)
+        /
+        (
+            (1.0 / ou2_5_over)
+            +
+            (1.0 / ou2_5_under)
+        )
+
+    WHEN {{Float64(ou_line)}} = 3.5 THEN
+        (1.0 / ou3_5_over)
+        /
+        (
+            (1.0 / ou3_5_over)
+            +
+            (1.0 / ou3_5_under)
+        )
+
+    WHEN {{Float64(ou_line)}} = 4.5 THEN
+        (1.0 / ou4_5_over)
+        /
+        (
+            (1.0 / ou4_5_over)
+            +
+            (1.0 / ou4_5_under)
+        )
+    {% else %}
+    NULL
+    {% end %}
+END AS hist_ou_over_p,
+
+
+CASE
+    {% if defined(ou_line) %}
+    WHEN {{Float64(ou_line)}} = 1.5 THEN
+        (1.0 / ou1_5_under)
+        /
+        (
+            (1.0 / ou1_5_over)
+            +
+            (1.0 / ou1_5_under)
+        )
+
+    WHEN {{Float64(ou_line)}} = 2.5 THEN
+        (1.0 / ou2_5_under)
+        /
+        (
+            (1.0 / ou2_5_over)
+            +
+            (1.0 / ou2_5_under)
+        )
+
+    WHEN {{Float64(ou_line)}} = 3.5 THEN
+        (1.0 / ou3_5_under)
+        /
+        (
+            (1.0 / ou3_5_over)
+            +
+            (1.0 / ou3_5_under)
+        )
+
+    WHEN {{Float64(ou_line)}} = 4.5 THEN
+        (1.0 / ou4_5_under)
+        /
+        (
+            (1.0 / ou4_5_over)
+            +
+            (1.0 / ou4_5_under)
+        )
+    {% else %}
+    NULL
+    {% end %}
+END AS hist_ou_under_p,
+
+
+/* ============================================================
+   HISTORICAL BTTS PROBABILITIES
+   ============================================================ */
+
+1.0 / btts_yes AS hist_btts_yes_raw,
+1.0 / btts_no AS hist_btts_no_raw,
+
+(
+    (1.0 / btts_yes)
+    +
+    (1.0 / btts_no)
+) AS hist_btts_sum,
+
+hist_btts_yes_raw / hist_btts_sum AS hist_btts_yes_p,
+hist_btts_no_raw / hist_btts_sum AS hist_btts_no_p,
+
+
+/* ============================================================
+   HISTORICAL AH PROBABILITIES
+   ============================================================ */
+
+1.0 / ah_home AS hist_ah_home_raw,
+1.0 / ah_away AS hist_ah_away_raw,
+
+(
+    (1.0 / ah_home)
+    +
+    (1.0 / ah_away)
+) AS hist_ah_sum,
+
+hist_ah_home_raw / hist_ah_sum AS hist_ah_home_p,
+hist_ah_away_raw / hist_ah_sum AS hist_ah_away_p
+
+SELECT
+
+    match_id,
+    country,
+    league,
+    season,
+    home_team,
+    away_team,
+    date,
+    time,
+
+    ht_home,
+    ht_away,
+    ft_home,
+    ft_away,
+
+    result,
+    ht_ft,
+
+    home_odds,
+    draw_odds,
+    away_odds,
+
+    ou1_5_over,
+    ou1_5_under,
+    ou2_5_over,
+    ou2_5_under,
+    ou3_5_over,
+    ou3_5_under,
+    ou4_5_over,
+    ou4_5_under,
+
+    btts_yes,
+    btts_no,
+
+    ah_line,
+    ah_home,
+    ah_away,
+
+
+    /* ========================================================
+       1X2 DISTANCE
+       ======================================================== */
+
+    sqrt(
+        (
+            pow(hist_1x2_home_p - target_1x2_home_p, 2)
+            +
+            pow(hist_1x2_draw_p - target_1x2_draw_p, 2)
+            +
+            pow(hist_1x2_away_p - target_1x2_away_p, 2)
+        ) / 3
+    ) AS distance_1x2,
+
+
+    /* ========================================================
+       O/U DISTANCE
+       ======================================================== */
+
+    CASE
+
+        {% if defined(ou_line) %}
+
+        WHEN {{Float64(ou_line)}} = 1.5 THEN
+
+            sqrt(
+                (
+                    pow(
+                        hist_ou_over_p - target_ou_over_p,
+                        2
+                    )
+                    +
+                    pow(
+                        hist_ou_under_p - target_ou_under_p,
+                        2
+                    )
+                ) / 2
+            )
+
+        WHEN {{Float64(ou_line)}} = 2.5 THEN
+
+            sqrt(
+                (
+                    pow(
+                        hist_ou_over_p - target_ou_over_p,
+                        2
+                    )
+                    +
+                    pow(
+                        hist_ou_under_p - target_ou_under_p,
+                        2
+                    )
+                ) / 2
+            )
+
+        WHEN {{Float64(ou_line)}} = 3.5 THEN
+
+            sqrt(
+                (
+                    pow(
+                        hist_ou_over_p - target_ou_over_p,
+                        2
+                    )
+                    +
+                    pow(
+                        hist_ou_under_p - target_ou_under_p,
+                        2
+                    )
+                ) / 2
+            )
+
+        WHEN {{Float64(ou_line)}} = 4.5 THEN
+
+            sqrt(
+                (
+                    pow(
+                        hist_ou_over_p - target_ou_over_p,
+                        2
+                    )
+                    +
+                    pow(
+                        hist_ou_under_p - target_ou_under_p,
+                        2
+                    )
+                ) / 2
+            )
+
+        {% else %}
+
+        NULL
+
+        {% end %}
+
+    END AS distance_ou,
+
+
+    /* ========================================================
+       BTTS DISTANCE
+       ======================================================== */
+
+    sqrt(
+        (
+            pow(
+                hist_btts_yes_p - target_btts_yes_p,
+                2
+            )
+            +
+            pow(
+                hist_btts_no_p - target_btts_no_p,
+                2
+            )
+        ) / 2
+    ) AS distance_btts,
+
+
+    /* ========================================================
+       AH DISTANCE
+       ======================================================== */
+
+    sqrt(
+        (
+            pow(
+                hist_ah_home_p - target_ah_home_p,
+                2
+            )
+            +
+            pow(
+                hist_ah_away_p - target_ah_away_p,
+                2
+            )
+        ) / 2
+    ) AS distance_ah
+
+
+FROM betexplorer_matches
+
+WHERE has_odds = 'True'
+
+/* ============================================================
+   REQUIRED 1X2
+   ============================================================ */
+
+{% if defined(home_odds) %}
+AND isNotNull(home_odds)
+AND isNotNull(draw_odds)
+AND isNotNull(away_odds)
+{% end %}
+
+
+/* ============================================================
+   OPTIONAL O/U
+   ============================================================ */
+
+{% if defined(ou_line) %}
+
+AND
+(
+    (
+        {{Float64(ou_line)}} = 1.5
+        AND isNotNull(ou1_5_over)
+        AND isNotNull(ou1_5_under)
+    )
+
+    OR
+
+    (
+        {{Float64(ou_line)}} = 2.5
+        AND isNotNull(ou2_5_over)
+        AND isNotNull(ou2_5_under)
+    )
+
+    OR
+
+    (
+        {{Float64(ou_line)}} = 3.5
+        AND isNotNull(ou3_5_over)
+        AND isNotNull(ou3_5_under)
+    )
+
+    OR
+
+    (
+        {{Float64(ou_line)}} = 4.5
+        AND isNotNull(ou4_5_over)
+        AND isNotNull(ou4_5_under)
+    )
+)
+
+{% end %}
+
+
+/* ============================================================
+   OPTIONAL BTTS
+   ============================================================ */
+
+{% if defined(btts_yes_odds) %}
+
+AND isNotNull(btts_yes)
+AND isNotNull(btts_no)
+
+{% end %}
+
+
+/* ============================================================
+   OPTIONAL AH
+   ============================================================ */
+
+{% if defined(ah_line) %}
+
+AND isNotNull(ah_line)
+AND ah_line = {{Float64(ah_line)}}
+AND isNotNull(ah_home)
+AND isNotNull(ah_away)
+
+{% end %}
+
+
+/* ============================================================
+   OPTIONAL LOCATION FILTERS
+   ============================================================ */
+
+{% if defined(country) %}
+AND country = {{String(country)}}
+{% end %}
+
+{% if defined(league) %}
+AND league = {{String(league)}}
+{% end %}
+
+{% if defined(season) %}
+AND season = {{String(season)}}
+{% end %}
+
+
+/* ============================================================
+   RESULT
+   ============================================================ */
+
+ORDER BY
+
+    (
+        distance_1x2
+
+        {% if defined(ou_line) %}
+        +
+        distance_ou
+        {% end %}
+
+        {% if defined(btts_yes_odds) %}
+        +
+        distance_btts
+        {% end %}
+
+        {% if defined(ah_line) %}
+        +
+        distance_ah
+        {% end %}
+    )
+
+    ASC
+
+LIMIT {{Int32(limit)}}
+
+OFFSET {{Int32(offset)}}
+
+TYPE ENDPOINT
