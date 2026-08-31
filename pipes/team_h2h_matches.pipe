@@ -22,67 +22,79 @@ NODE team_h2h_matches_query
 SQL >
     %
 
-    SELECT
+SELECT
 
-        match_id,
+    match_id,
 
-        toString(date) AS date,
+    toString(date) AS date,
 
-        home_team,
+    home_team,
 
-        away_team,
+    away_team,
 
-        concat(
-            toString(ft_home),
-            '-',
-            toString(ft_away)
-        ) AS score
+    /* =====================================================
+       İLK YARI SKORU
+       ===================================================== */
 
-    FROM betexplorer_matches
+    ht_home,
 
-    WHERE
+    ht_away,
 
+    /* =====================================================
+       MAÇ SONU SKORU
+       ===================================================== */
+
+    concat(
+        toString(ft_home),
+        '-',
+        toString(ft_away)
+    ) AS score
+
+FROM betexplorer_matches
+
+WHERE
+
+    (
         (
-            (
-                home_team = {{String(team1)}}
-                AND
-                away_team = {{String(team2)}}
-            )
-
-            OR
-
-            (
-                home_team = {{String(team2)}}
-                AND
-                away_team = {{String(team1)}}
-            )
+            home_team = {{String(team1)}}
+            AND
+            away_team = {{String(team2)}}
         )
 
-        AND ft_home IS NOT NULL
-        AND ft_away IS NOT NULL
+        OR
+
+        (
+            home_team = {{String(team2)}}
+            AND
+            away_team = {{String(team1)}}
+        )
+    )
+
+    AND ft_home IS NOT NULL
+    AND ft_away IS NOT NULL
 
 
-        {% if defined(country) %}
-        AND country = {{String(country)}}
-        {% end %}
+    {% if defined(country) %}
+    AND country = {{String(country)}}
+    {% end %}
 
 
-        {% if defined(league) %}
-        AND league = {{String(league)}}
-        {% end %}
+    {% if defined(league) %}
+    AND league = {{String(league)}}
+    {% end %}
 
 
-        {% if defined(season) %}
-        AND season = {{String(season)}}
-        {% end %}
+    {% if defined(season) %}
+    AND season = {{String(season)}}
+    {% end %}
 
 
-    ORDER BY
-        date DESC
+ORDER BY
+    date DESC
 
 
-    LIMIT
-        {{Int32(limit, 10)}}
+LIMIT
+    {{Int32(limit, 10)}}
 
 
 TYPE ENDPOINT
